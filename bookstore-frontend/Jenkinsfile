@@ -1,0 +1,48 @@
+pipeline {
+  agent any
+
+  environment {
+    SERVICE_DIR = 'bookstore-frontend'
+    DOCKER_REGISTRY = 'https://index.docker.io/v1/'
+    IMAGE_NAME  = 'khawlarouiss/bookstore-frontend'
+    DOCKER_CREDENTIALS_ID = 'dockerlogin'
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build Angular') {
+      steps {
+        dir("${SERVICE_DIR}") {
+          sh 'npm ci'
+          sh 'npm run build -- --configuration production'
+        }
+      }
+    }
+
+    stage('Docker Build & Push') {
+      steps {
+        dir("${SERVICE_DIR}") {
+          script {
+            docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+              def img = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+              img.push()
+              img.push('latest')
+            }
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      cleanWs()
+    }
+  }
+}
