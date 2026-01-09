@@ -10,9 +10,28 @@ pipeline {
 
   stages {
 
-    stage('Checkout') {
+    stage('Check for Changes') {
       steps {
-        checkout scm
+        script {
+          def changedFiles = sh(
+            script: """
+              if git rev-parse HEAD~1 >/dev/null 2>&1; then
+                git diff --name-only HEAD~1 HEAD
+              else
+                git ls-files
+              fi
+            """,
+            returnStdout: true
+          ).trim()
+          
+          if (!changedFiles.contains("${SERVICE_DIR}/")) {
+            currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
+            echo "Skipping ${SERVICE_DIR} - no changes detected"
+            return
+          }
+          
+          currentBuild.description = "Building ${SERVICE_DIR}"
+        }
       }
     }
 

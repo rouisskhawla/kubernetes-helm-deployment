@@ -10,7 +10,7 @@ pipeline {
   }
   
   stages {
-    
+
     stage('Check for Changes') {
       steps {
         script {
@@ -26,22 +26,16 @@ pipeline {
           ).trim()
           
           if (!changedFiles.contains("${SERVICE_DIR}/")) {
-            currentBuild.result = 'NOT_BUILT'
             currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
-            error("Skipping - no changes in ${SERVICE_DIR}")
+            echo "Skipping ${SERVICE_DIR} - no changes detected"
+            return
           }
           
-          currentBuild.description = "🔨 Building ${SERVICE_DIR}"
+          currentBuild.description = "Building ${SERVICE_DIR}"
         }
       }
     }
-    
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-    
+
     stage('Build Maven') {
       tools {
         maven 'Maven 3.9.11'
@@ -53,7 +47,7 @@ pipeline {
         }
       }
     }
-    
+
     stage('Docker Build & Push') {
       steps {
         dir("${SERVICE_DIR}") {
@@ -68,7 +62,7 @@ pipeline {
       }
     }
   }
-  
+
   post {
     always {
       cleanWs()
