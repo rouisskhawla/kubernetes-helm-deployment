@@ -17,6 +17,9 @@ pipeline {
     }
 
     stage('Build Angular') {
+      tools {
+        nodejs 'Node 24'
+      }
       steps {
         dir("${SERVICE_DIR}") {
           sh 'npm ci'
