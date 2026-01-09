@@ -9,63 +9,68 @@ pipeline {
   }
 
   stages {
-
-    stage('Check for Changes') {
-      steps {
-        script {
-          def changedFiles = sh(
-            script: """
-              if git rev-parse HEAD~1 >/dev/null 2>&1; then
-                git diff --name-only HEAD~1 HEAD
-              else
-                git ls-files
-              fi
-            """,
-            returnStdout: true
-          ).trim()
-          
-          if (!changedFiles.contains("${SERVICE_DIR}/")) {
-            currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
-            echo "Skipping ${SERVICE_DIR} - no changes detected"
-            return
-          }
-          
-          currentBuild.description = "Building ${SERVICE_DIR}"
-        }
-      }
-    }
-
-    stage('Build Maven') {
-      tools {
-        maven 'Maven 3.9.11'
-        jdk 'jdk17'
-      }
-      steps {
-        dir("${SERVICE_DIR}") {
-          sh 'mvn clean package -DskipTests'
-        }
-      }
-    }
-
-    stage('Docker Build & Push') {
-      steps {
-        dir("${SERVICE_DIR}") {
-          script {
-            docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-              def img = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
-              img.push()
-              img.push('latest')
+    
+        stage('Checkout') {
+            steps {
+                checkout scm
             }
-          }
         }
-      }
-    }
-  }
 
-  post {
-    always {
-      cleanWs()
+        stage('Check for Changes') {
+            steps {
+                script {
+                    def changedFiles = sh(
+                script: '''
+                  if git rev-parse HEAD~1 >/dev/null 2>&1; then
+                    git diff --name-only HEAD~1 HEAD
+                  else
+                    git ls-files
+                  fi
+                ''',
+                returnStdout: true
+              ).trim()
+
+                    if (!changedFiles.contains("${SERVICE_DIR}/")) {
+                        currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
+                        echo "Skipping ${SERVICE_DIR} - no changes detected"
+                        return
+                    }
+
+                    currentBuild.description = "Building ${SERVICE_DIR}"
+                }
+            }
+        }
+
+        stage('Build Maven') {
+            tools {
+                maven 'Maven 3.9.11'
+                jdk 'jdk17'
+            }
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh 'mvn clean package -DskipTests'
+                }
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    script {
+                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                            def img = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+                            img.push()
+                            img.push('latest')
+                        }
+                    }
+                }
+            }
+        }
     }
-  }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
 }
-
