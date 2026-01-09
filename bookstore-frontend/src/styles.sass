@@ -1,0 +1,93 @@
+/* Global Styles for Bookstore App */
+
+/* Body & Base */
+body
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+  background-color: #f9f9f9
+  margin: 0
+  padding: 20px
+  color: #333
+
+h1, h2, h3, h4, h5, h6
+  margin: 0 0 10px 0
+  font-weight: 600
+
+/* Form Styling */
+form
+  display: flex
+  flex-wrap: wrap
+  gap: 15px
+  margin-bottom: 20px
+  background-color: #fff
+  padding: 15px
+  border-radius: 8px
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05)
+
+input, select
+  padding: 8px 12px
+  border: 1px solid #ccc
+  border-radius: 6px
+  font-size: 14px
+  flex: 1 1 200px
+  transition: border-color 0.3s
+  &:focus
+    border-color: #007bff
+    outline: none
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3)
+
+button
+  padding: 8px 16px
+  border: none
+  border-radius: 6px
+  background-color: #007bff
+  color: white
+  font-weight: 500
+  cursor: pointer
+  transition: background-color 0.3s, transform 0.2s
+  &:hover
+    background-color: #0056b3
+    transform: translateY(-1px)
+  &:active
+    transform: translateY(0)
+
+/* Table Styling */
+table
+  width: 100%
+  border-collapse: collapse
+  background-color: #fff
+  border-radius: 8px
+  overflow: hidden
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05)
+  margin-top: 10px
+
+th, td
+  padding: 12px 15px
+  text-align: left
+  border-bottom: 1px solid #eee
+
+th
+  background-color: #007bff
+  color: #fff
+  font-weight: 600
+
+tr:nth-child(even)
+  background-color: #f5f5f5
+
+tr:hover
+  background-color: #e9f2ff
+
+/* Responsive Table */
+@media (max-width: 768px)
+  table, thead, tbody, th, td, tr
+    display: block
+  th
+    display: none
+  td
+    display: flex
+    justify-content: space-between
+    padding: 10px
+    border-bottom: 1px solid #ddd
+    &::before
+      content: attr(data-label)
+      font-weight: 600
+      color: #555
