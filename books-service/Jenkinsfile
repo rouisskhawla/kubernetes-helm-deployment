@@ -2,9 +2,9 @@ pipeline {
   agent any
 
   environment {
-    SERVICE_DIR = 'authors-service'
+    SERVICE_DIR = 'books-service'
     DOCKER_REGISTRY = 'https://index.docker.io/v1/'
-    IMAGE_NAME  = 'khawlarouiss/authors-service'
+    IMAGE_NAME  = 'khawlarouiss/books-service'
     DOCKER_CREDENTIALS_ID = 'dockerlogin'
   }
 
@@ -49,3 +49,4 @@ pipeline {
     }
   }
 }
+
