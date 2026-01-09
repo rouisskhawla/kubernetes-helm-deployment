@@ -17,28 +17,26 @@ pipeline {
         }
 
         stage('Check for Changes') {
-            steps {
-                script {
-                    def changedFiles = sh(
+          steps {
+            script {
+              def changedFiles = sh(
                 script: '''
-                  if git rev-parse HEAD~1 >/dev/null 2>&1; then
-                    git diff --name-only HEAD~1 HEAD
-                  else
-                    git ls-files
-                  fi
+                  git fetch origin ${BRANCH_NAME} || true
+                  # Compare current HEAD to remote branch to detect changes in service dir
+                  git diff --name-only origin/${BRANCH_NAME} HEAD || true
                 ''',
                 returnStdout: true
-              ).trim()
-
-                    if (!changedFiles.contains("${SERVICE_DIR}/")) {
-                        currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
-                        echo "Skipping ${SERVICE_DIR} - no changes detected"
-                        return
-                    }
-
-                    currentBuild.description = "Building ${SERVICE_DIR}"
-                }
+              ).trim().split("\n")
+              def serviceChanged = changedFiles.any { it.startsWith("${SERVICE_DIR}/") }
+              if (!serviceChanged) {
+                currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
+                echo "Skipping ${SERVICE_DIR} - no changes detected"
+                return
+              }
+              currentBuild.description = "Building ${SERVICE_DIR}"
+              echo "Changes detected in ${SERVICE_DIR}, proceeding with build"
             }
+          }
         }
 
         stage('Build Maven') {
@@ -74,3 +72,4 @@ pipeline {
         }
     }
 }
+
