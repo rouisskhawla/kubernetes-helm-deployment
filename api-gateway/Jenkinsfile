@@ -3,43 +3,26 @@ pipeline {
 
     environment {
         SERVICE_DIR = 'api-gateway'
+        IMAGE_NAME = 'khawlarouiss/api-gateway'
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
-        IMAGE_NAME  = 'khawlarouiss/api-gateway'
         DOCKER_CREDENTIALS_ID = 'dockerlogin'
     }
 
     stages {
-        
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Check for Changes') {
-          steps {
-            script {
-              def changedFiles = sh(
-                script: '''
-                  git fetch origin ${BRANCH_NAME} || true
-                  # Compare current HEAD to remote branch to detect changes in service dir
-                  git diff --name-only origin/${BRANCH_NAME} HEAD || true
-                ''',
-                returnStdout: true
-              ).trim().split("\n")
-              def serviceChanged = changedFiles.any { it.startsWith("${SERVICE_DIR}/") }
-              if (!serviceChanged) {
-                currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
-                echo "Skipping ${SERVICE_DIR} - no changes detected"
-                return
-              }
-              currentBuild.description = "Building ${SERVICE_DIR}"
-              echo "Changes detected in ${SERVICE_DIR}, proceeding with build"
-            }
-          }
-        }
-
         stage('Build Maven') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+                }
+            }
             tools {
                 maven 'Maven 3.9.11'
                 jdk 'jdk17'
@@ -51,12 +34,36 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Build') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+                }
+            }
             steps {
                 dir("${SERVICE_DIR}") {
                     script {
                         docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                            def img = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+                            docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+                }
+            }
+            steps {
+                dir("${SERVICE_DIR}") {
+                    script {
+                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                            def img = docker.image("${IMAGE_NAME}:${BUILD_NUMBER}")
                             img.push()
                             img.push('latest')
                         }
@@ -72,4 +79,3 @@ pipeline {
         }
     }
 }
-
