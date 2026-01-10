@@ -8,40 +8,21 @@ pipeline {
     DOCKER_CREDENTIALS_ID = 'dockerlogin'
   }
 
-  stages {
-    
+   stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Check for Changes') {
-            steps {
-                script {
-                    def changedFiles = sh(
-                script: '''
-                  if git rev-parse HEAD~1 >/dev/null 2>&1; then
-                    git diff --name-only HEAD~1 HEAD
-                  else
-                    git ls-files
-                  fi
-                ''',
-                returnStdout: true
-              ).trim()
-
-                    if (!changedFiles.contains("${SERVICE_DIR}/")) {
-                        currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
-                        echo "Skipping ${SERVICE_DIR} - no changes detected"
-                        return
-                    }
-
-                    currentBuild.description = "Building ${SERVICE_DIR}"
+        stage('Build Maven') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
                 }
             }
-        }
-
-        stage('Build Maven') {
             tools {
                 maven 'Maven 3.9.11'
                 jdk 'jdk17'
@@ -53,12 +34,36 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Build') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+                }
+            }
             steps {
                 dir("${SERVICE_DIR}") {
                     script {
                         docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                            def img = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+                            docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+                }
+            }
+            steps {
+                dir("${SERVICE_DIR}") {
+                    script {
+                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                            def img = docker.image("${IMAGE_NAME}:${BUILD_NUMBER}")
                             img.push()
                             img.push('latest')
                         }
@@ -70,7 +75,9 @@ pipeline {
 
     post {
         always {
+            echo "Build finished with status: ${currentBuild.currentResult}"
             cleanWs()
         }
     }
+
 }
