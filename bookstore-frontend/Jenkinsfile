@@ -10,12 +10,6 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-    
         stage('Build Angular') {
             when {
                 allOf {
@@ -84,4 +78,5 @@ pipeline {
     }
 
 }
+
 
