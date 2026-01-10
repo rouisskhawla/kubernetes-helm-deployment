@@ -75,7 +75,10 @@ pipeline {
 
     post {
         always {
+            echo "Build finished with status: ${currentBuild.currentResult}"
             cleanWs()
         }
     }
+
 }
+
