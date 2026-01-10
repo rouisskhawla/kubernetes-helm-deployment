@@ -1,77 +1,83 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    SERVICE_DIR = 'bookstore-frontend'
-    DOCKER_REGISTRY = 'https://index.docker.io/v1/'
-    IMAGE_NAME  = 'khawlarouiss/bookstore-frontend'
-    DOCKER_CREDENTIALS_ID = 'dockerlogin'
-  }
+    environment {
+        SERVICE_DIR = 'bookstore-frontend'
+        DOCKER_REGISTRY = 'https://index.docker.io/v1/'
+        IMAGE_NAME  = 'khawlarouiss/bookstore-frontend'
+        DOCKER_CREDENTIALS_ID = 'dockerlogin'
+    }
 
-  stages {
+    stages {
 
-    stage('Checkout') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-
-        stage('Check for Changes') {
+    
+        stage('Build Angular') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+              }
+            }
+            tools {
+                nodejs 'Node 24'
+            }
             steps {
-                script {
-                    def changedFiles = sh(
-                script: '''
-                  if git rev-parse HEAD~1 >/dev/null 2>&1; then
-                    git diff --name-only HEAD~1 HEAD
-                  else
-                    git ls-files
-                  fi
-                ''',
-                returnStdout: true
-              ).trim()
-
-                    if (!changedFiles.contains("${SERVICE_DIR}/")) {
-                        currentBuild.description = "⏭️ No changes in ${SERVICE_DIR}"
-                        echo "Skipping ${SERVICE_DIR} - no changes detected"
-                        return
-                    }
-
-                    currentBuild.description = "Building ${SERVICE_DIR}"
+                dir("${SERVICE_DIR}") {
+                    sh 'npm ci'
+                    sh 'npm run build -- --configuration production'
                 }
             }
         }
 
-    stage('Build Angular') {
-      tools {
-        nodejs 'Node 24'
-      }
-      steps {
-        dir("${SERVICE_DIR}") {
-          sh 'npm ci'
-          sh 'npm run build -- --configuration production'
-        }
-      }
-    }
-
-    stage('Docker Build & Push') {
-      steps {
-        dir("${SERVICE_DIR}") {
-          script {
-            docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-              def img = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
-              img.push()
-              img.push('latest')
+        stage('Docker Build') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+                }
             }
-          }
+            steps {
+                dir("${SERVICE_DIR}") {
+                    script {
+                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                            docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+                        }
+                    }
+                }
+            }
         }
-      }
-    }
-  }
 
-  post {
-    always {
-      cleanWs()
+        stage('Docker Push') {
+            when {
+                allOf {
+                    branch 'main'
+                    changeset "${SERVICE_DIR}/**"
+                }
+            }
+            steps {
+                dir("${SERVICE_DIR}") {
+                    script {
+                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                            def img = docker.image("${IMAGE_NAME}:${BUILD_NUMBER}")
+                            img.push()
+                            img.push('latest')
+                        }
+                    }
+                }
+            }
+        }
     }
-  }
+
+    post {
+        always {
+            echo "Build finished with status: ${currentBuild.currentResult}"
+            cleanWs()
+        }
+    }
+
 }
-
