@@ -4,7 +4,7 @@ This repository contains a monorepo setup for a microservice-based application, 
 
 ---
 
-##  Project Structure
+## Project Structure
 
 ```
 kubernetes-helm-deployment/
@@ -33,15 +33,15 @@ Each service has its own `Jenkinsfile`, `Dockerfile`, and build configuration.
 
 ---
 
-##  CI/CD Architecture
+## CI/CD Architecture
 
 We use **Jenkins Multibranch Pipelines** to manage independent pipelines per service. Each service builds, tests, and pushes Docker images separately.
 
-**Jenkins Dashboard Overview:**  
+### Jenkins Dashboard
 
 The dashboard shows all pipeline jobs per service.
 
-[Jenkins Dashboard](docs/screenshots/jenkins-dashboard.png)
+![Jenkins Dashboard](docs/screenshots/jenkins-dashboard.png)
 
 ### Pipeline Jobs
 
@@ -77,7 +77,7 @@ The dashboard shows all pipeline jobs per service.
 
 ---
 
-##  Credentials
+## Credentials
 
 The Jenkins pipelines require the following credentials:
 
@@ -86,7 +86,7 @@ The Jenkins pipelines require the following credentials:
 | `dockerlogin`      | Username/Password | Global | Docker Hub username | Authenticate with Docker Hub to build and push images using a **Docker Hub access token** |
 | `github-api-token` | Username/Password | Global | `x-access-token`    | Authenticate with GitHub using a **fine-grained Personal Access Token (PAT)**             |
 
-[Jenkins Credentials](docs/screenshots/jenkins-credentials.png)
+![Jenkins Credentials](docs/screenshots/jenkins-credentials.png)
 
 ### GitHub Fine-Grained PAT Details
 
@@ -96,7 +96,7 @@ The Jenkins pipelines require the following credentials:
 
   * **Username:** `x-access-token`
   * **Password:** GitHub PAT
-* Scope: **Global** – usable across all Jenkins jobs and nodes
+  * Scope: **Global** – usable across all Jenkins jobs and nodes
 
 **Required PAT Permissions:**
 
@@ -111,11 +111,11 @@ The Jenkins pipelines require the following credentials:
 
   * **Username:** Docker Hub username
   * **Password:** Docker Hub access token
-* Scope: **Global** – usable by all pipelines
+  * Scope: **Global** – usable by all pipelines
 
 ---
 
-##  Jenkins Configuration
+## Jenkins Configuration
 
 **Plugins Required:**
 
@@ -133,7 +133,7 @@ The Jenkins pipelines require the following credentials:
 
 ---
 
-##  Jenkins Multibranch Pipeline Configuration
+## Jenkins Multibranch Pipeline Configuration
 
 **Branch Sources:**
 
@@ -150,14 +150,11 @@ The Jenkins pipelines require the following credentials:
 
 * **Mode:** By Jenkinsfile
 * **Script Path:** Specify the path to the service’s Jenkinsfile, e.g., `api-gateway/Jenkinsfile`
-* **Scan Repository Triggers:**
+* **Scan Repository Triggers:** Scan triggered by GitHub webhook events
 
-  * Scan triggered by GitHub webhook events
-
-**Pipeline Job Configuration:**  
+**Pipeline Job Configuration:**
 
 [Pipeline Configuration](docs/screenshots/pipeline-config.png)
-
 
 **Environment / Service Variables (for Jenkinsfile):**
 
@@ -171,16 +168,17 @@ Each service pipeline defines its own **environment variables**:
 **Execute Pipeline Only When a Service Changes:**
 
 * Build, Docker Build, and Docker Push stages are wrapped with a condition:
-  
-  `when { changeset "SERVICE_DIR/**" }`
-   
+
+  ```groovy
+  when { changeset "SERVICE_DIR/**" }
+  ```
+
 * This ensures that the pipeline **runs only if files in that service’s directory are modified**.
 
 **Example behavior:**
 
 * If only `authors-service/` files change, **only the `authors-service` pipeline runs**.
-
-This setup **prevents unnecessary builds** and keeps CI/CD efficient by isolating each service.
+* This setup **prevents unnecessary builds** and keeps CI/CD efficient by isolating each service.
 
 **Multibranch Pipeline Notes:**
 
@@ -202,16 +200,13 @@ https://ngrok-jenkins/github-webhook/
 * Trigger: Push events
 * SSL verification: Enabled
 
-**GitHub Webhook Settings:**  
-
-Webhook triggers builds on push events.
+**GitHub Webhook Settings:**
 
 [GitHub Webhook Settings](docs/screenshots/webhook-github-settings.png)
 
-
 ---
 
-##  Example Workflow
+## Example Workflow
 
 * Updating a back-end service triggers only that service’s build. Other services are skipped.
 * Updating `bookstore-frontend` triggers only its build.
@@ -225,19 +220,18 @@ Example:
 ⏭️ bookstore-frontend → Skipped
 ```
 
-**Pipeline Run Example:**  
+**Pipeline Run Example:**
 
-This shows a successful pipeline run for api-gateway service.
+This shows a successful pipeline run for `api-gateway` service:
 
 * Executed stages screenshot: [Pipeline Run](docs/screenshots/pipeline-run.png)
+* Executed stages log: [pipeline-logs-executed.log](docs/logs/pipeline-logs-executed.log)
 
-* Executed stages log: [pipeline-logs-executed.log](docs/logs/pipeline-logs-executed.log)  
+**Skipped Pipeline Example:**
 
-**Skipped Pipeline Example:**  
+Stages are skipped when no changes are made in the `api-gateway` service directory:
 
-Stages are skipped when no changes are made in the api-gateway service directory.
-
-* Skipped stages: [Pipeline Skipped](docs/screenshots/pipeline-skipped.png)
+* Skipped stages screenshot: [Pipeline Skipped](docs/screenshots/pipeline-skipped.png)
 * Skipped stages log: [pipeline-logs-skipped.log](docs/logs/pipeline-logs-skipped.log)
 
 ---
@@ -245,4 +239,3 @@ Stages are skipped when no changes are made in the api-gateway service directory
 ## ☸️ Kubernetes Deployment
 
 *(To be added later – Helm charts and deployment instructions)*
-
