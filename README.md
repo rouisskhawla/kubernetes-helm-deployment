@@ -37,6 +37,12 @@ Each service has its own `Jenkinsfile`, `Dockerfile`, and build configuration.
 
 We use **Jenkins Multibranch Pipelines** to manage independent pipelines per service. Each service builds, tests, and pushes Docker images separately.
 
+**Jenkins Dashboard Overview:**  
+
+The dashboard shows all pipeline jobs per service.
+
+[Jenkins Dashboard](docs/screenshots/jenkins-dashboard.png)
+
 ### Pipeline Jobs
 
 | Service            | Jenkinsfile Path                 |
@@ -79,6 +85,8 @@ The Jenkins pipelines require the following credentials:
 | ------------------ | ----------------- | ------ | ------------------- | ----------------------------------------------------------------------------------------- |
 | `dockerlogin`      | Username/Password | Global | Docker Hub username | Authenticate with Docker Hub to build and push images using a **Docker Hub access token** |
 | `github-api-token` | Username/Password | Global | `x-access-token`    | Authenticate with GitHub using a **fine-grained Personal Access Token (PAT)**             |
+
+[Jenkins Credentials](docs/screenshots/jenkins-credentials.png)
 
 ### GitHub Fine-Grained PAT Details
 
@@ -146,6 +154,11 @@ The Jenkins pipelines require the following credentials:
 
   * Scan triggered by GitHub webhook events
 
+**Pipeline Job Configuration:**  
+
+[Pipeline Configuration](docs/screenshots/pipeline-config.png)
+
+
 **Environment / Service Variables (for Jenkinsfile):**
 
 Each service pipeline defines its own **environment variables**:
@@ -189,6 +202,13 @@ https://ngrok-jenkins/github-webhook/
 * Trigger: Push events
 * SSL verification: Enabled
 
+**GitHub Webhook Settings:**  
+
+Webhook triggers builds on push events.
+
+[GitHub Webhook Settings](docs/screenshots/webhook-github-settings.png)
+
+
 ---
 
 ##  Example Workflow
@@ -204,6 +224,21 @@ Example:
 ⏭️ api-gateway → Skipped
 ⏭️ bookstore-frontend → Skipped
 ```
+
+**Pipeline Run Example:**  
+
+This shows a successful pipeline run for api-gateway service.
+
+* Executed stages screenshot: [Pipeline Run](docs/screenshots/pipeline-run.png)
+
+* Executed stages log: [pipeline-logs-executed.log](docs/logs/pipeline-logs-executed.log)  
+
+**Skipped Pipeline Example:**  
+
+Stages are skipped when no changes are made in the api-gateway service directory.
+
+* Skipped stages: [Pipeline Skipped](docs/screenshots/pipeline-skipped.png)
+* Skipped stages log: [pipeline-logs-skipped.log](docs/logs/pipeline-logs-skipped.log)
 
 ---
 

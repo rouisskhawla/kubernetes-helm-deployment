@@ -1,0 +1,75 @@
+Push event to branch main
+Connecting to https://api.github.com using x-access-token/****** (“GitHub PAT for API access”)
+Obtained authors-service/Jenkinsfile from 063a41df94b6c9c69305ab1d6cdf77951f1ca593
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /var/lib/jenkins/workspace/authors-service_main
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+using credential github-api-token
+Cloning the remote Git repository
+Cloning with configured refspecs honoured and without tags
+Cloning repository https://github.com/rouisskhawla/kubernetes-helm-deployment.git
+ > git init /var/lib/jenkins/workspace/authors-service_main # timeout=10
+Fetching upstream changes from https://github.com/rouisskhawla/kubernetes-helm-deployment.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+using GIT_ASKPASS to set credentials “GitHub PAT for API access”
+ > git fetch --no-tags --force --progress -- https://github.com/rouisskhawla/kubernetes-helm-deployment.git +refs/heads/main:refs/remotes/origin/main # timeout=10
+ > git config remote.origin.url https://github.com/rouisskhawla/kubernetes-helm-deployment.git # timeout=10
+ > git config --add remote.origin.fetch +refs/heads/main:refs/remotes/origin/main # timeout=10
+Avoid second fetch
+Checking out Revision 063a41df94b6c9c69305ab1d6cdf77951f1ca593 (main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 063a41df94b6c9c69305ab1d6cdf77951f1ca593 # timeout=10
+Commit message: "delete duplicate scm stage"
+ > git rev-list --no-walk 0d617697845cb388fe1cebabc69cd72fda1aa742 # timeout=10
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Build Maven)
+Stage "Build Maven" skipped due to when conditional
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Docker Build)
+Stage "Docker Build" skipped due to when conditional
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Docker Push)
+Stage "Docker Push" skipped due to when conditional
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] echo
+Build finished with status: SUCCESS
+[Pipeline] cleanWs
+[WS-CLEANUP] Deleting project workspace...
+[WS-CLEANUP] Deferred wipeout is used...
+[WS-CLEANUP] done
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+
+GitHub has been notified of this commit’s build result
+
+Finished: SUCCESS
