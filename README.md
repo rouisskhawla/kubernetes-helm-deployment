@@ -20,14 +20,17 @@ kubernetes-helm-deployment/
 │   ├── Jenkinsfile
 │   ├── Dockerfile
 │   └── pom.xml
-└── bookstore-frontend/
-    ├── Jenkinsfile      
-    ├── Dockerfile  
-    └── package.json 
+├── bookstore-frontend/
+│   ├── Jenkinsfile      
+│   ├── Dockerfile  
+│   └── package.json 
+└── scripts/
+    └── version.sh
 ```
 
 * **Back-end services:** `authors-service`, `books-service`, `api-gateway` (Java/Spring Boot, Maven)
 * **Front-end service:** `bookstore-frontend` (Angular, NodeJS)
+* **Shared scripts:** `scripts/version.sh` – semantic versioning logic used by all pipelines
 
 Each service has its own `Jenkinsfile`, `Dockerfile`, and build configuration.
 
@@ -43,35 +46,125 @@ The dashboard shows all pipeline jobs per service.
 
 ![Jenkins Dashboard](docs/screenshots/jenkins-dashboard.png)
 
-### Pipeline Jobs
+---
 
-| Service            | Jenkinsfile Path                 |
-| ------------------ | -------------------------------- |
-| authors-service    | `authors-service/Jenkinsfile`    |
-| books-service      | `books-service/Jenkinsfile`      |
-| api-gateway        | `api-gateway/Jenkinsfile`        |
-| bookstore-frontend | `bookstore-frontend/Jenkinsfile` |
+## Branch Strategy & Environments
 
-### Jenkins Pipeline Overview
+The CI/CD setup is **branch-driven** and environment-aware.
 
-**Back-end services:**
+| Branch | Purpose     | Docker Tag Format | Target               |
+| ------ | ----------- | ----------------- | -------------------- |
+| `dev`  | Development | `X.Y.Z-dev`       | Kubernetes Cluster A |
+| `main` | Production  | `X.Y.Z`, `latest` | Kubernetes Cluster B |
+
+**Key rules:**
+
+* Pipelines run on **both `dev` and `main`**
+* Images are built **only when the service directory changes**
+* The same image versioning logic is shared across all services
+
+---
+
+## Semantic Versioning Strategy
+
+Versioning is handled **outside Jenkinsfiles** via a shared script:
+
+```
+scripts/version.sh
+```
+
+### Version Format
+
+```
+MAJOR.MINOR.PATCH
+```
+
+### Increment Rules
+
+| Change Type                 | Version Increment |
+| --------------------------- | ----------------- |
+| Bug fix / small change      | PATCH             |
+| Backward-compatible feature | MINOR             |
+| Breaking change             | MAJOR             |
+
+### Branch Behavior
+
+* **dev branch**
+
+  * Automatically increments **PATCH**
+  * Appends `-dev` suffix
+  * Example:
+
+    ```
+    1.4.3-dev
+    ```
+
+* **main branch**
+
+  * Uses the same base version
+  * No suffix
+  * Also publishes `latest`
+  * Example:
+
+    ```
+    1.4.3
+    latest
+    ```
+
+### Version Source of Truth
+
+* The script queries **Docker Hub** for the latest image tag
+* No build numbers
+* No Git SHA tags
+* Versions increase **only when the service actually changes**
+
+---
+
+## Jenkins Pipeline Overview
+
+### Version Computation (All Services)
+
+Each pipeline computes the version before building:
+
+```bash
+./scripts/version.sh <image-name> <branch>
+```
+
+The computed version is then used consistently for:
+
+* Docker build
+* Docker push
+* Deployment (future Helm stages)
+
+---
+
+### Back-end services
 
 1. Checkout code
-2. Maven build: `mvn clean package -DskipTests`
-3. Docker build and push
-4. Post-build actions & workspace cleanup
+2. Compute semantic version
+3. Maven build: `mvn clean package -DskipTests`
+4. Docker build using service directory as context
+5. Docker push with computed tag
+6. Post-build actions & workspace cleanup
 
-**Front-end service (`bookstore-frontend`):**
+---
 
-1. Checkout code
-2. Angular build:
+### Front-end service (`bookstore-frontend`)
+
+1. Compute semantic version
+
+2. Checkout code
+
+3. Angular build:
 
    ```bash
    npm ci
    npm run build -- --configuration production
    ```
-3. Docker build and push
-4. Post-build actions & cleanup
+
+4. Docker build and push
+
+5. Post-build actions & cleanup
 
 **NodeJS Tool:** NodeJS 24 (configured in Jenkins)
 
@@ -135,56 +228,38 @@ The Jenkins pipelines require the following credentials:
 
 ## Jenkins Multibranch Pipeline Configuration
 
-**Branch Sources:**
-
-* **Type:** GitHub
-* **Credentials:** `x-access-token/******` (“GitHub PAT for API access”)
-* **Repository HTTPS URL:**
-
-  ```
-  https://github.com/rouisskhawla/kubernetes-helm-deployment.git
-  ```
-* **Validate:** Enabled to confirm repository access
-
 **Build Configuration:**
 
 * **Mode:** By Jenkinsfile
-* **Script Path:** Specify the path to the service’s Jenkinsfile, e.g., `api-gateway/Jenkinsfile`
-* **Scan Repository Triggers:** Scan triggered by GitHub webhook events
 
-**Pipeline Job Configuration:**
+* **Script Path:**
+  Example:
 
-[Pipeline Configuration](docs/screenshots/pipeline-config.png)
-
-**Environment / Service Variables (for Jenkinsfile):**
-
-Each service pipeline defines its own **environment variables**:
-
-* `SERVICE_DIR` – the folder of the service in the repository (e.g., `authors-service`)
-* `IMAGE_NAME` – Docker image name for the service (e.g., `username/authors-service`)
-
-> These variables are used to detect changes in the service directory and to tag Docker images consistently.
-
-**Execute Pipeline Only When a Service Changes:**
-
-* Build, Docker Build, and Docker Push stages are wrapped with a condition:
-
-  ```groovy
-  when { changeset "SERVICE_DIR/**" }
+  ```
+  api-gateway/Jenkinsfile
   ```
 
-* This ensures that the pipeline **runs only if files in that service’s directory are modified**.
+* **Branch Discovery:** All branches (`dev`, `main`)
 
-**Example behavior:**
+* **Trigger:** GitHub webhook push events
 
-* If only `authors-service/` files change, **only the `authors-service` pipeline runs**.
-* This setup **prevents unnecessary builds** and keeps CI/CD efficient by isolating each service.
+---
 
-**Multibranch Pipeline Notes:**
+### Execute Pipeline Only When a Service Changes
 
-* Discover all branches in the repository
-* Detect pull requests from origin
-* Scan repository automatically using GitHub webhook triggers
+All build-related stages are guarded by:
+
+```groovy
+when {
+  changeset "${SERVICE_DIR}/**"
+}
+```
+
+This ensures:
+
+* No version bump without real changes
+* No unnecessary Docker images
+* Clean, predictable version history
 
 ---
 
@@ -200,42 +275,30 @@ https://ngrok-jenkins/github-webhook/
 * Trigger: Push events
 * SSL verification: Enabled
 
-**GitHub Webhook Settings:**
-
 [GitHub Webhook Settings](docs/screenshots/webhook-github-settings.png)
 
 ---
 
 ## Example Workflow
 
-* Updating a back-end service triggers only that service’s build. Other services are skipped.
-* Updating `bookstore-frontend` triggers only its build.
-
-Example:
+**Change pushed to `authors-service` on `dev`:**
 
 ```
-✅ authors-service → Build #42 (SUCCESS)
-⏭️ books-service → Skipped
-⏭️ api-gateway → Skipped
-⏭️ bookstore-frontend → Skipped
+authors-service:1.2.4-dev
 ```
 
-**Pipeline Run Example:**
+**Promoted to `main`:**
 
-This shows a successful pipeline run for `api-gateway` service:
+```
+authors-service:1.2.4
+authors-service:latest
+```
 
-* Executed stages screenshot: [Pipeline Run](docs/screenshots/pipeline-run.png)
-* Executed stages log: [pipeline-logs-executed.log](docs/logs/pipeline-logs-executed.log)
-
-**Skipped Pipeline Example:**
-
-Stages are skipped when no changes are made in the `api-gateway` service directory:
-
-* Skipped stages screenshot: [Pipeline Skipped](docs/screenshots/pipeline-skipped.png)
-* Skipped stages log: [pipeline-logs-skipped.log](docs/logs/pipeline-logs-skipped.log)
+Other services remain skipped.
 
 ---
 
 ## ☸️ Kubernetes Deployment
 
-*(To be added later – Helm charts and deployment instructions)*
+*(To be added later – Helm charts, environment-specific values, and automated deployments to Cluster A / Cluster B)*
+
