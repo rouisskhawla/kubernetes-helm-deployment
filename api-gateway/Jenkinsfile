@@ -28,10 +28,7 @@ pipeline {
 
         stage('Build Maven') {
             when {
-                allOf {
-                    branch 'main'
-                    changeset "${SERVICE_DIR}/**"
-                }
+                changeset "${SERVICE_DIR}/**"
             }
             tools {
                 maven 'Maven 3.9.11'
@@ -46,17 +43,15 @@ pipeline {
 
         stage('Docker Build') {
             when {
-                allOf {
-                    branch 'main'
-                    changeset "${SERVICE_DIR}/**"
-                }
+                changeset "${SERVICE_DIR}/**"
             }
             steps {
-                dir("${SERVICE_DIR}") {
-                    script {
-                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                            docker.build("${IMAGE_NAME}:${VERSION}")
-                        }
+                script {
+                    docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                        docker.build(
+                            "${IMAGE_NAME}:${env.VERSION}",
+                            "${SERVICE_DIR}"
+                        )
                     }
                 }
             }
@@ -64,17 +59,14 @@ pipeline {
 
         stage('Docker Push') {
             when {
-                allOf {
-                    branch 'main'
-                    changeset "${SERVICE_DIR}/**"
-                }
+                changeset "${SERVICE_DIR}/**"
             }
             steps {
-                dir("${SERVICE_DIR}") {
-                    script {
-                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                            def img = docker.image("${IMAGE_NAME}:${VERSION}")
-                            img.push()
+                script {
+                    docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                        def img = docker.image("${IMAGE_NAME}:${env.VERSION}")
+                        img.push()
+                        if (env.BRANCH_NAME == 'main') {
                             img.push('latest')
                         }
                     }
@@ -86,7 +78,7 @@ pipeline {
 
     post {
         always {
-            echo "Build finished with status: ${currentBuild.currentResult}"
+            echo "Pipeline finished with status: ${currentBuild.currentResult}"
             cleanWs()
         }
     }
