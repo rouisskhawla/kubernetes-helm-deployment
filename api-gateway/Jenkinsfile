@@ -1,12 +1,16 @@
 pipeline {
+    
     agent any
+    
     environment {
         SERVICE_DIR = 'api-gateway'
         IMAGE_NAME = 'khawlarouiss/api-gateway'
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
         DOCKER_CREDENTIALS_ID = 'dockerlogin'
     }
+    
     stages {
+        
         stage('Compute Version') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -22,6 +26,7 @@ pipeline {
                 }
             }
         }
+        
         stage('Build Maven') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -36,6 +41,7 @@ pipeline {
                 }
             }
         }
+        
         stage('Docker Build') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -51,6 +57,7 @@ pipeline {
                 }
             }
         }
+        
         stage('Docker Push') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -68,6 +75,7 @@ pipeline {
             }
         }
     }
+    
     post {
         always {
             echo "Pipeline finished with status: ${currentBuild.currentResult}"
@@ -75,5 +83,6 @@ pipeline {
         }
     }
 }
+
 
 
