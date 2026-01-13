@@ -9,13 +9,26 @@ pipeline {
     }
 
     stages {
-        
+
+        stage('Compute Version') {
+            when {
+                changeset "${SERVICE_DIR}/**"
+            }
+            steps {
+                script {
+                    sh 'chmod +x scripts/version.sh'
+                    env.VERSION = sh(
+                        script: "./scripts/version.sh ${IMAGE_NAME} ${BRANCH_NAME}",
+                        returnStdout: true
+                    ).trim()
+                    echo "Computed version: ${env.VERSION}"
+                }
+            }
+        }
+
         stage('Build Maven') {
             when {
-                allOf {
-                    branch 'main'
-                    changeset "${SERVICE_DIR}/**"
-                }
+                changeset "${SERVICE_DIR}/**"
             }
             tools {
                 maven 'Maven 3.9.11'
@@ -30,17 +43,15 @@ pipeline {
 
         stage('Docker Build') {
             when {
-                allOf {
-                    branch 'main'
-                    changeset "${SERVICE_DIR}/**"
-                }
+                changeset "${SERVICE_DIR}/**"
             }
             steps {
-                dir("${SERVICE_DIR}") {
-                    script {
-                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                            docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
-                        }
+                script {
+                    docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                        docker.build(
+                            "${IMAGE_NAME}:${env.VERSION}",
+                            "${SERVICE_DIR}"
+                        )
                     }
                 }
             }
@@ -48,28 +59,26 @@ pipeline {
 
         stage('Docker Push') {
             when {
-                allOf {
-                    branch 'main'
-                    changeset "${SERVICE_DIR}/**"
-                }
+                changeset "${SERVICE_DIR}/**"
             }
             steps {
-                dir("${SERVICE_DIR}") {
-                    script {
-                        docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                            def img = docker.image("${IMAGE_NAME}:${BUILD_NUMBER}")
-                            img.push()
+                script {
+                    docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                        def img = docker.image("${IMAGE_NAME}:${env.VERSION}")
+                        img.push()
+                        if (env.BRANCH_NAME == 'main') {
                             img.push('latest')
                         }
                     }
                 }
             }
         }
+        
     }
 
     post {
         always {
-            echo "Build finished with status: ${currentBuild.currentResult}"
+            echo "Pipeline finished with status: ${currentBuild.currentResult}"
             cleanWs()
         }
     }
