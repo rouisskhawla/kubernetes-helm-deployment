@@ -42,7 +42,7 @@ We use **Jenkins Multibranch Pipelines** to manage independent pipelines per ser
 
 ### Jenkins Dashboard
 
-The dashboard shows all pipeline jobs per service.
+The dashboard shows all pipeline jobs per service:
 
 ![Jenkins Dashboard](docs/screenshots/jenkins-dashboard.png)
 
@@ -61,13 +61,13 @@ The CI/CD setup is **branch-driven** and environment-aware.
 
 * Pipelines run on **both `dev` and `main`**
 * Images are built **only when the service directory changes**
-* The same image versioning logic is shared across all services
+* Versioning is shared via `scripts/version.sh`
 
 ---
 
 ## Semantic Versioning Strategy
 
-Versioning is handled **outside Jenkinsfiles** via a shared script:
+Versioning is handled **outside Jenkinsfiles** via the shared script:
 
 ```
 scripts/version.sh
@@ -93,30 +93,25 @@ MAJOR.MINOR.PATCH
 
   * Automatically increments **PATCH**
   * Appends `-dev` suffix
-  * Example:
-
-    ```
-    1.4.3-dev
-    ```
+  * Example: `1.4.3-dev`
 
 * **main branch**
 
   * Uses the same base version
   * No suffix
   * Also publishes `latest`
-  * Example:
-
-    ```
-    1.4.3
-    latest
-    ```
+  * Example: `1.4.3`, `latest`
 
 ### Version Source of Truth
 
-* The script queries **Docker Hub** for the latest image tag
-* No build numbers
-* No Git SHA tags
-* Versions increase **only when the service actually changes**
+* The versioning script queries **Docker Hub** for the latest image tag of each service
+* No build numbers or Git SHA–based tags are used
+* Versions increase **only when files inside the service directory change**
+
+#### Docker Hub Images
+
+**API Gateway**
+[Docker Hub – API Gateway](docs/screenshots/dockerhub-api-gateway.png)
 
 ---
 
@@ -130,7 +125,7 @@ Each pipeline computes the version before building:
 ./scripts/version.sh <image-name> <branch>
 ```
 
-The computed version is then used consistently for:
+The computed version is then used for:
 
 * Docker build
 * Docker push
@@ -152,18 +147,15 @@ The computed version is then used consistently for:
 ### Front-end service (`bookstore-frontend`)
 
 1. Compute semantic version
-
 2. Checkout code
-
 3. Angular build:
 
-   ```bash
-   npm ci
-   npm run build -- --configuration production
-   ```
+```bash
+npm ci
+npm run build -- --configuration production
+```
 
-4. Docker build and push
-
+4. Docker build & push
 5. Post-build actions & cleanup
 
 **NodeJS Tool:** NodeJS 24 (configured in Jenkins)
@@ -171,8 +163,6 @@ The computed version is then used consistently for:
 ---
 
 ## Credentials
-
-The Jenkins pipelines require the following credentials:
 
 | Credential ID      | Type              | Scope  | Username / Token    | Purpose                                                                                   |
 | ------------------ | ----------------- | ------ | ------------------- | ----------------------------------------------------------------------------------------- |
@@ -184,12 +174,12 @@ The Jenkins pipelines require the following credentials:
 ### GitHub Fine-Grained PAT Details
 
 * Generate a **fine-grained Personal Access Token (PAT)** in GitHub Developer settings
-* **Repository access:** Select **“Only select repositories”** and choose **this project repository**
+* **Repository access:** Select **“Only select repositories”** and choose this project repository
 * Store it in Jenkins as **Username/Password credential**
 
   * **Username:** `x-access-token`
   * **Password:** GitHub PAT
-  * Scope: **Global** – usable across all Jenkins jobs and nodes
+  * Scope: **Global**
 
 **Required PAT Permissions:**
 
@@ -231,17 +221,19 @@ The Jenkins pipelines require the following credentials:
 **Build Configuration:**
 
 * **Mode:** By Jenkinsfile
-
-* **Script Path:**
-  Example:
-
-  ```
-  api-gateway/Jenkinsfile
-  ```
-
+* **Script Path:** Example: `api-gateway/Jenkinsfile`
 * **Branch Discovery:** All branches (`dev`, `main`)
-
 * **Trigger:** GitHub webhook push events
+
+---
+
+### Pipeline Branches per Service
+
+Each service is configured as a **Jenkins Multibranch Pipeline**, automatically discovering and building multiple branches.
+
+**Example – service pipeline showing `dev` and `main` branches:**
+
+![Pipeline Branches](docs/screenshots/pipeline-branches.png)
 
 ---
 
@@ -294,7 +286,7 @@ authors-service:1.2.4
 authors-service:latest
 ```
 
-Other services remain skipped.
+Other services remain skipped if unchanged.
 
 ---
 
