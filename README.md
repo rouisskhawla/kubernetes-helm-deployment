@@ -24,8 +24,11 @@ kubernetes-helm-deployment/
 │   ├── Jenkinsfile      
 │   ├── Dockerfile  
 │   └── package.json 
-└── scripts/
-    └── version.sh
+├── scripts/
+│   └── version.sh
+└── docs/
+    ├── screenshots/
+    └── logs/
 ```
 
 * **Back-end services:** `authors-service`, `books-service`, `api-gateway` (Java/Spring Boot, Maven)
@@ -220,10 +223,14 @@ npm run build -- --configuration production
 
 **Build Configuration:**
 
+Each service is configured as a Jenkins **Multibranch Pipeline** pointing to its own `Jenkinsfile`.
+
 * **Mode:** By Jenkinsfile
 * **Script Path:** Example: `api-gateway/Jenkinsfile`
 * **Branch Discovery:** All branches (`dev`, `main`)
 * **Trigger:** GitHub webhook push events
+  
+[Pipeline Configuration](docs/screenshots/pipeline-config.png)
 
 ---
 
@@ -286,7 +293,26 @@ authors-service:1.2.4
 authors-service:latest
 ```
 
-Other services remain skipped if unchanged.
+
+### Successful Pipeline Execution
+
+The following screenshot shows a successful pipeline execution for a service, including version computation, build, and Docker push stages:
+
+![Pipeline Run](docs/screenshots/pipeline-run.png)
+
+You can view the full pipeline execution log here:
+
+[View pipeline execution log](docs/logs/pipeline-logs-executed.log)
+
+### Skipped Stages
+
+Other services remain skipped if unchanged. The screenshot below shows stages being **skipped automatically** when no changes are detected in the service directory:
+
+![Pipeline Skipped](docs/screenshots/pipeline-skipped.png)
+
+You can view the full skipped pipeline log here:
+
+[View skipped pipeline log](docs/logs/pipeline-logs-skipped.log)
 
 ---
 
