@@ -1,0 +1,8 @@
+resources:
+  - ../base
+
+nameSuffix: -prod
+
+images:
+  - name: khawlarouiss/api-gateway
+    newTag: PLACEHOLDER

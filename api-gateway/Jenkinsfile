@@ -1,15 +1,19 @@
 pipeline {
-    
     agent any
-    
+
     environment {
         SERVICE_DIR = 'api-gateway'
         IMAGE_NAME = 'khawlarouiss/api-gateway'
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
         DOCKER_CREDENTIALS_ID = 'dockerlogin'
+        KUBECONFIG_DEV = 'kubeconfig-dev'
+        KUBECONFIG_PROD = 'kubeconfig-prod'
+        DEV_NAMESPACE = 'dev'
+        PROD_NAMESPACE = 'prod'
     }
-    
+
     stages {
+
         stage('Compute Version') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -25,6 +29,7 @@ pipeline {
                 }
             }
         }
+
         stage('Build Maven') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -39,6 +44,7 @@ pipeline {
                 }
             }
         }
+
         stage('Docker Build') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -46,14 +52,12 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                        docker.build(
-                            "${IMAGE_NAME}:${env.VERSION}",
-                            "${SERVICE_DIR}"
-                        )
+                        docker.build("${IMAGE_NAME}:${env.VERSION}", "${SERVICE_DIR}")
                     }
                 }
             }
         }
+
         stage('Docker Push') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -70,7 +74,58 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            when {
+                allOf {
+                    changeset "${SERVICE_DIR}/**"
+                    anyOf {
+                        branch 'dev'
+                        branch 'main'
+                    }
+                }
+            }
+            steps {
+                script {
+
+                    def kubeconfig
+                    def overlay
+                    def namespace
+
+                    if (env.BRANCH_NAME == 'dev') {
+                        kubeconfig = credentials(KUBECONFIG_DEV)
+                        overlay = 'dev'
+                        namespace = DEV_NAMESPACE
+                        echo "Deploying to DEV cluster"
+                    }
+
+                    if (env.BRANCH_NAME == 'main') {
+                        kubeconfig = credentials(KUBECONFIG_PROD)
+                        overlay = 'prod'
+                        namespace = PROD_NAMESPACE
+                        echo "Deploying to PROD cluster"
+                    }
+
+                    withEnv(["KUBECONFIG=${kubeconfig}"]) {
+
+                        sh """
+                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -
+
+                        kubectl kustomize ${SERVICE_DIR}/k8s/${overlay} \
+                          | sed "s/PLACEHOLDER/${VERSION}/g" \
+                          | kubectl apply -n ${namespace} -f -
+                        """
+
+                        sh """
+                        kubectl rollout status deployment/api-gateway-${overlay} \
+                          -n ${namespace}
+                        """
+                    }
+                }
+            }
+        }
     }
+
     post {
         always {
             echo "Pipeline finished with status: ${currentBuild.currentResult}"
