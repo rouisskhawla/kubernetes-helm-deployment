@@ -107,6 +107,12 @@ pipeline {
                     withEnv(["KUBECONFIG=${kubeconfig}"]) {
 
                         sh """
+                        echo "Testing Kubernetes access..."
+                        kubectl cluster-info
+                        kubectl get nodes
+                        """
+
+                        sh """
                         kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply --validate=false -f -
                         """
 
@@ -117,7 +123,13 @@ pipeline {
                         """
 
                         sh """
-                        kubectl rollout status deployment/${SERVICE_DIR}-${overlay} -n ${namespace}
+                        DEPLOYMENT_NAME=${SERVICE_DIR}-${overlay}
+                        if kubectl get deployment \$DEPLOYMENT_NAME -n ${namespace} > /dev/null 2>&1; then
+                            echo "Rolling out deployment \$DEPLOYMENT_NAME..."
+                            kubectl rollout status deployment/\$DEPLOYMENT_NAME -n ${namespace}
+                        else
+                            echo "Deployment \$DEPLOYMENT_NAME does not exist yet."
+                        fi
                         """
                     }
                 }
