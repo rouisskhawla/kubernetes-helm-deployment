@@ -1,8 +1,0 @@
-resources:
-  - ../base
-
-nameSuffix: -dev
-
-images:
-  - name: khawlarouiss/api-gateway
-    newTag: PLACEHOLDER

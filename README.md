@@ -1,6 +1,6 @@
-# Kubernetes Helm Deployment Monorepo
+# Kubernetes Deployment Monorepo
 
-This repository contains a monorepo setup for a microservice-based application, designed for streamlined CI/CD using Jenkins, Docker, and Kubernetes Helm deployments.
+This repository contains a monorepo setup for a microservice-based application, designed for streamlined CI/CD using Jenkins, Docker, and Kubernetes deployments.
 
 ---
 
@@ -9,24 +9,29 @@ This repository contains a monorepo setup for a microservice-based application, 
 ```
 kubernetes-helm-deployment/
 ├── authors-service/
-│   ├── Jenkinsfile      
-│   ├── Dockerfile   
-│   └── pom.xml    
+│   ├── Jenkinsfile
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── k8s/
 ├── books-service/
 │   ├── Jenkinsfile
 │   ├── Dockerfile
-│   └── pom.xml
+│   ├── pom.xml
+│   └── k8s/
 ├── api-gateway/
 │   ├── Jenkinsfile
 │   ├── Dockerfile
-│   └── pom.xml
+│   ├── pom.xml
+│   └── k8s/
 ├── bookstore-frontend/
-│   ├── Jenkinsfile      
-│   ├── Dockerfile  
-│   └── package.json 
+│   ├── Jenkinsfile
+│   ├── Dockerfile
+│   ├── package.json
+│   └── k8s/
 ├── scripts/
 │   └── version.sh
 └── docs/
+    ├── cluster-setup.md
     ├── screenshots/
     └── logs/
 ```
@@ -35,13 +40,13 @@ kubernetes-helm-deployment/
 * **Front-end service:** `bookstore-frontend` (Angular, NodeJS)
 * **Shared scripts:** `scripts/version.sh` – semantic versioning logic used by all pipelines
 
-Each service has its own `Jenkinsfile`, `Dockerfile`, and build configuration.
+Each service has its own `Jenkinsfile`, `Dockerfile`, **and Kubernetes manifests** under `k8s/`.
 
 ---
 
 ## CI/CD Architecture
 
-We use **Jenkins Multibranch Pipelines** to manage independent pipelines per service. Each service builds, tests, and pushes Docker images separately.
+We use **Jenkins Multibranch Pipelines** to manage independent pipelines per service. Each service builds, tests, pushes Docker images, and deploys to Kubernetes.
 
 ### Jenkins Dashboard
 
@@ -132,7 +137,7 @@ The computed version is then used for:
 
 * Docker build
 * Docker push
-* Deployment (future Helm stages)
+* Deployment via Kubernetes manifests
 
 ---
 
@@ -171,6 +176,8 @@ npm run build -- --configuration production
 | ------------------ | ----------------- | ------ | ------------------- | ----------------------------------------------------------------------------------------- |
 | `dockerlogin`      | Username/Password | Global | Docker Hub username | Authenticate with Docker Hub to build and push images using a **Docker Hub access token** |
 | `github-api-token` | Username/Password | Global | `x-access-token`    | Authenticate with GitHub using a **fine-grained Personal Access Token (PAT)**             |
+| `kubeconfig-dev`   | Secret file       | Global | -                   | Kubernetes Dev cluster access                                                             |
+| `kubeconfig-prod`  | Secret file       | Global | -                   | Kubernetes Prod cluster access                                                            |
 
 ![Jenkins Credentials](docs/screenshots/jenkins-credentials.png)
 
@@ -300,23 +307,50 @@ The following screenshot shows a successful pipeline execution for a service, in
 
 ![Pipeline Run](docs/screenshots/pipeline-run.png)
 
-You can view the full pipeline execution log here:
-
-[View pipeline execution log](docs/logs/pipeline-logs-executed.log)
-
 ### Skipped Stages
 
 Other services remain skipped if unchanged. The screenshot below shows stages being **skipped automatically** when no changes are detected in the service directory:
 
 ![Pipeline Skipped](docs/screenshots/pipeline-skipped.png)
 
-You can view the full skipped pipeline log here:
-
-[View skipped pipeline log](docs/logs/pipeline-logs-skipped.log)
-
 ---
 
 ## ☸️ Kubernetes Deployment
 
-*(To be added later – Helm charts, environment-specific values, and automated deployments to Cluster A / Cluster B)*
+All services are deployed using **raw Kubernetes manifests** in each service’s `k8s/` directory.
 
+### Manifest Files
+
+* `deployment.yaml` – defines pods, replicas, container image, ports, and environment variables
+* `service.yaml` – exposes the application inside the cluster (ClusterIP for now)
+* `configmap.yaml` – holds non-sensitive configuration and environment variables
+
+### Jenkinsfile Updates for Deployment
+
+1. **Select cluster** based on branch:
+
+   * `dev` → Dev cluster
+   * `main` → Prod cluster
+2. **Load kubeconfig credential** in pipeline stage
+3. **Inject image tag** computed during build
+4. Apply manifests in order:
+
+   * ConfigMap
+   * Service
+   * Deployment
+
+All deployment stages are **guarded by the changeset check** to prevent unnecessary rollouts.
+
+---
+
+## Cluster Setup Documentation
+
+For detailed cluster setup instructions, see [docs/cluster-setup.md](docs/cluster-setup.md)
+
+This file contains:
+
+* VM networking and static IP configuration
+* Kubernetes installation (kubeadm + containerd)
+* CNI setup (Calico)
+* Jenkins → Kubernetes access
+* Kubeconfig management

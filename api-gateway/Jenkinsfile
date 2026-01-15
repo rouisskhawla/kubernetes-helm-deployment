@@ -97,9 +97,7 @@ pipeline {
                         overlay = 'dev'
                         namespace = DEV_NAMESPACE
                         echo "Deploying to DEV cluster"
-                    }
-
-                    if (env.BRANCH_NAME == 'main') {
+                    } else if (env.BRANCH_NAME == 'main') {
                         kubeconfig = credentials(KUBECONFIG_PROD)
                         overlay = 'prod'
                         namespace = PROD_NAMESPACE
@@ -110,15 +108,16 @@ pipeline {
 
                         sh """
                         kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -
-
-                        kubectl kustomize ${SERVICE_DIR}/k8s/${overlay} \
-                          | sed "s/PLACEHOLDER/${VERSION}/g" \
-                          | kubectl apply -n ${namespace} -f -
                         """
 
                         sh """
-                        kubectl rollout status deployment/api-gateway-${overlay} \
-                          -n ${namespace}
+                        for file in ${SERVICE_DIR}/k8s/${overlay}/*.yaml; do
+                            sed "s/PLACEHOLDER/${VERSION}/g" \$file | kubectl apply -n ${namespace} -f -
+                        done
+                        """
+
+                        sh """
+                        kubectl rollout status deployment/${SERVICE_DIR}-${overlay} -n ${namespace}
                         """
                     }
                 }
@@ -133,7 +132,3 @@ pipeline {
         }
     }
 }
-
-
-
-
