@@ -16,7 +16,7 @@ REPO=$(echo "$IMAGE_NAME" | cut -d/ -f2)
 # Fetch tags from Docker Hub (exclude latest & dev)
 TAGS=$(curl -s "https://hub.docker.com/v2/repositories/${ORG}/${REPO}/tags/?page_size=100" \
   | jq -r '.results[].name' \
-  | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true)
+  | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9]+)?$' || true)
 
 if [[ -z "$TAGS" ]]; then
   BASE_VERSION="0.0.0"
@@ -24,7 +24,9 @@ else
   BASE_VERSION=$(echo "$TAGS" | sort -V | tail -n 1)
 fi
 
-IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+# Split numeric part and suffix
+VERSION_NUMBER=$(echo "$BASE_VERSION" | cut -d'-' -f1)
+IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NUMBER"
 PATCH=$((PATCH + 1))
 
 if [[ "$BRANCH" == "dev" ]]; then
