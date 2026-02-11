@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api-gateway-PLACEHOLDER   # Jenkins will append -dev or -prod
+  name: api-gateway
   labels:
     app: api-gateway
 spec:
