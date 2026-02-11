@@ -89,11 +89,11 @@ pipeline {
                     def kubeCredId
 
                     if (env.BRANCH_NAME == 'dev') {
-                        namespace = dev
+                        namespace = 'dev'
                         kubeCredId = KUBECONFIG_DEV
                         echo "Deploying to DEV cluster"
                     } else if (env.BRANCH_NAME == 'main') {
-                        namespace = prod
+                        namespace = 'prod'
                         kubeCredId = KUBECONFIG_PROD
                         echo "Deploying to PROD cluster"
                     }
