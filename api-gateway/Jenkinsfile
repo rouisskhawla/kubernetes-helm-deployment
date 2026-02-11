@@ -87,33 +87,29 @@ pipeline {
             }
             steps {
                 script {
-
-                    def kubeconfig
                     def overlay
                     def namespace
+                    def kubeCredId
 
                     if (env.BRANCH_NAME == 'dev') {
-                        kubeconfig = credentials(KUBECONFIG_DEV)
                         overlay = 'dev'
                         namespace = DEV_NAMESPACE
+                        kubeCredId = KUBECONFIG_DEV
                         echo "Deploying to DEV cluster"
                     } else if (env.BRANCH_NAME == 'main') {
-                        kubeconfig = credentials(KUBECONFIG_PROD)
                         overlay = 'prod'
                         namespace = PROD_NAMESPACE
+                        kubeCredId = KUBECONFIG_PROD
                         echo "Deploying to PROD cluster"
                     }
 
-                    withEnv(["KUBECONFIG=${kubeconfig}"]) {
-
+                    withCredentials([file(credentialsId: kubeCredId, variable: 'KUBECONFIG')]) {
                         sh """
                         echo "Testing Kubernetes access..."
                         kubectl cluster-info
                         kubectl get nodes
                         kubectl get pods -A
-                        echo "Finished Testing Kubernetes access..."
                         """
-
                     }
                 }
             }
