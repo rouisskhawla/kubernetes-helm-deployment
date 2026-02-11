@@ -110,6 +110,26 @@ pipeline {
                         kubectl get nodes
                         kubectl get pods -A
                         """
+
+                        sh """
+                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply --validate=false -f -
+                        """
+
+                        sh """
+                        for file in ${SERVICE_DIR}/k8s/*.yaml; do
+                            sed "s/PLACEHOLDER/${VERSION}/g" \$file | kubectl apply -n ${namespace} -f -
+                        done
+                        """
+
+                        sh """
+                        DEPLOYMENT_NAME=${SERVICE_DIR}-${overlay}
+                        if kubectl get deployment \$DEPLOYMENT_NAME -n ${namespace} > /dev/null 2>&1; then
+                            echo "Rolling out deployment \$DEPLOYMENT_NAME..."
+                            kubectl rollout status deployment/\$DEPLOYMENT_NAME -n ${namespace}
+                        else
+                            echo "Deployment \$DEPLOYMENT_NAME does not exist yet."
+                        fi
+                        """
                     }
                 }
             }
