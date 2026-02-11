@@ -8,8 +8,6 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'dockerlogin'
         KUBECONFIG_DEV = 'kubeconfig-dev'
         KUBECONFIG_PROD = 'kubeconfig-prod'
-        DEV_NAMESPACE = 'dev'
-        PROD_NAMESPACE = 'prod'
     }
 
     stages {
@@ -91,11 +89,11 @@ pipeline {
                     def kubeCredId
 
                     if (env.BRANCH_NAME == 'dev') {
-                        namespace = DEV_NAMESPACE
+                        namespace = dev
                         kubeCredId = KUBECONFIG_DEV
                         echo "Deploying to DEV cluster"
                     } else if (env.BRANCH_NAME == 'main') {
-                        namespace = PROD_NAMESPACE
+                        namespace = prod
                         kubeCredId = KUBECONFIG_PROD
                         echo "Deploying to PROD cluster"
                     }
