@@ -43,7 +43,7 @@ pipeline {
             }
         }
 
-       stage('Docker Build') {
+        stage('Docker Build') {
             when {
                 changeset "${SERVICE_DIR}/**"
             }
