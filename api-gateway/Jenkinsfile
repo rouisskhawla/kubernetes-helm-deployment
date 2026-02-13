@@ -114,7 +114,7 @@ pipeline {
                         for file in ${SERVICE_DIR}/k8s/*.yaml; do
                             sed -e "s/PLACEHOLDER/${VERSION}/g" \
                                 -e "s/ENV/${namespace}/g" \
-                                $file | kubectl apply -n ${namespace} -f -
+                                \$file | kubectl apply -n ${namespace} -f -
                         done
                         """
 
