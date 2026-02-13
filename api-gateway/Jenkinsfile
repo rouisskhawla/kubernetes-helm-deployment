@@ -85,18 +85,35 @@ pipeline {
             }
             steps {
                 script {
+                    
                     def namespace
                     def kubeCredId
+                    def environmentName
 
                     if (env.BRANCH_NAME == 'dev') {
                         namespace = 'dev'
                         kubeCredId = KUBECONFIG_DEV
-                        echo "Deploying to DEV cluster"
+                        environmentName = "DEVELOPMENT"
                     } else if (env.BRANCH_NAME == 'main') {
                         namespace = 'prod'
                         kubeCredId = KUBECONFIG_PROD
-                        echo "Deploying to PROD cluster"
+                        environmentName = "PRODUCTION"
                     }
+
+                    input(
+                        message: """
+CONFIRM DEPLOYMENT
+
+Service      : ${SERVICE_DIR}
+Image        : ${IMAGE_NAME}:${env.VERSION}
+Branch       : ${env.BRANCH_NAME}
+Environment  : ${environmentName}
+Namespace    : ${namespace}
+
+Do you want to proceed?
+""",
+                        ok: "Deploy"
+                    )
 
                     withCredentials([file(credentialsId: kubeCredId, variable: 'KUBECONFIG')]) {
                         sh """
