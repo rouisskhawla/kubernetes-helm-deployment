@@ -280,10 +280,99 @@ Check nodes, pods, containerd, network, and API server connectivity on all VMs.
 
 ---
 
+## STEP 11: Install NGINX Ingress Controller and Configure Node IPs
+
+### 11.1 Install NGINX Ingress Controller (Both Clusters)
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+kubectl get pods -n ingress-nginx
+kubectl get svc -n ingress-nginx
+```
+
+### 11.2 Configure Node IP for kubelet (Both Clusters)
+
+```bash
+sudo nano /etc/default/kubelet
+# Add for Dev
+KUBELET_EXTRA_ARGS="--node-ip=192.168.56.107"
+# Add for Prod
+KUBELET_EXTRA_ARGS="--node-ip=192.168.56.108"
+```
+
+### 11.3 Restart kubelet
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+```
+
+### 11.4 Verify Node IP Configuration
+
+```bash
+kubectl get nodes -o wide
+kubectl describe node k8s-dev | grep -A 5 "Addresses:"
+kubectl describe node k8s-prod | grep -A 5 "Addresses:"
+```
+
+### 11.5 Test Ingress Controller
+
+```bash
+kubectl get ingress -n dev
+kubectl get ingress -n prod
+curl http://api-dev.bookstore.com
+curl http://api-prod.bookstore.com
+```
+
+---
+
+## STEP 12: Update /etc/hosts for Cluster Hostnames
+
+To enable local resolution of the cluster ingress hosts, edit `/etc/hosts` on relevant VMs (Dev, and Prod).
+
+### Dev Cluster VM
+
+```bash
+sudo nano /etc/hosts
+```
+
+Add:
+
+```
+192.168.56.107   api-dev.bookstore.com
+```
+
+Save and exit. Test:
+
+```bash
+ping -c 3 api-dev.bookstore.com
+```
+
+### Prod Cluster VM
+
+```bash
+sudo nano /etc/hosts
+```
+
+Add:
+
+```
+192.168.56.108   api-prod.bookstore.com
+```
+
+Save and exit. Test:
+
+```bash
+ping -c 3 api-prod.bookstore.com
+```
+
+---
+
 ## Summary
 
-Two clusters are ready for CI/CD:
+* Two clusters are ready for CI/CD:
 
-* Dev: 192.168.56.107, Pod CIDR 10.244.0.0/16
-* Prod: 192.168.56.108, Pod CIDR 10.245.0.0/16
-* Jenkins: 192.168.56.102
+  * Dev: 192.168.56.107, Pod CIDR 10.244.0.0/16
+  * Prod: 192.168.56.108, Pod CIDR 10.245.0.0/16
+  * Jenkins: 192.168.56.102
+* NGINX Ingress configured for both clusters with correct node IPs.
