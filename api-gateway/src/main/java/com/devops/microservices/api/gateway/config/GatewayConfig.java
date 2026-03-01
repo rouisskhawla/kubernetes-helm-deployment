@@ -8,13 +8,19 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class GatewayConfig {
 
+    @Value("${authors.service.url}")
+    private String authorsServiceUrl;
+
+    @Value("${books.service.url}")
+    private String booksServiceUrl;
+
     @Bean
     public RouteLocator gatewayRoutes(RouteLocatorBuilder builder) {
         return builder.routes()
             .route("books_service", r -> r.path("/api/books/**")
-                   .uri("lb://books-service"))
+                    .uri(booksServiceUrl))
             .route("authors_service", r -> r.path("/api/authors/**")
-                    .uri("lb://authors-service"))
-                .build();
+                    .uri(authorsServiceUrl))
+            .build();
     }
 }
