@@ -72,7 +72,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Deploy to Kubernetes') {
             when {
                 allOf {
@@ -85,7 +85,7 @@ pipeline {
             }
             steps {
                 script {
- 
+                    
                     def namespace
                     def kubeCredId
                     def environmentName
@@ -100,23 +100,24 @@ pipeline {
                         environmentName = "PRODUCTION"
                     }
 
-                    def approvalMessage =
-                        "CONFIRM DEPLOYMENT\n\n" +
-                        "Service      : ${SERVICE_DIR}\n" +
-                        "Image        : ${IMAGE_NAME}:${env.VERSION}\n" +
-                        "Branch       : ${env.BRANCH_NAME}\n" +
-                        "Environment  : ${environmentName}\n" +
-                        "Namespace    : ${namespace}\n\n" +
-                        "Do you want to proceed?"
-
                     input(
-                        message: approvalMessage,
+                        message: """
+CONFIRM DEPLOYMENT
+
+Service      : ${SERVICE_DIR}
+Image        : ${IMAGE_NAME}:${env.VERSION}
+Branch       : ${env.BRANCH_NAME}
+Environment  : ${environmentName}
+Namespace    : ${namespace}
+
+Do you want to proceed?
+""",
                         ok: "Deploy"
                     )
 
                     withCredentials([file(credentialsId: kubeCredId, variable: 'KUBECONFIG')]) {
                         sh """
-                        echo "Testing Kubernetes access..."
+                        echo "Testing Kubernetes access"
                         kubectl cluster-info
                         kubectl get nodes
                         kubectl get pods -A
@@ -128,7 +129,9 @@ pipeline {
 
                         sh """
                         for file in ${SERVICE_DIR}/k8s/*.yaml; do
-                            sed "s/PLACEHOLDER/${VERSION}/g" \$file | kubectl apply -n ${namespace} -f -
+                            sed -e "s/PLACEHOLDER/${VERSION}/g" \
+                                -e "s/ENV/${namespace}/g" \
+                                \$file | kubectl apply -n ${namespace} -f -
                         done
                         """
 

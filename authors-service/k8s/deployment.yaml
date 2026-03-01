@@ -18,7 +18,10 @@ spec:
         - name: authors-service
           image: khawlarouiss/authors-service:PLACEHOLDER
           ports:
-            - containerPort: 8090
+            - containerPort: 8082
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: ENV 
           envFrom:
             - configMapRef:
                 name: authors-service-config
