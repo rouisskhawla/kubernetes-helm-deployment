@@ -5,7 +5,7 @@ metadata:
   labels:
     app: books-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: books-service
@@ -18,7 +18,10 @@ spec:
         - name: books-service
           image: khawlarouiss/books-service:PLACEHOLDER
           ports:
-            - containerPort: 8090
+            - containerPort: 8081
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: ENV 
           envFrom:
             - configMapRef:
                 name: books-service-config
