@@ -330,6 +330,9 @@ curl http://api-prod.bookstore.com
 
 To enable local resolution of the cluster ingress hosts, edit `/etc/hosts` on relevant VMs (Dev, and Prod).
 
+api-dev.bookstore.com and api-prod.bookstore.com are used for api gateway service 
+dev.bookstore.com and prod.bookstore.com are used for bookstore frontend service 
+
 ### Dev Cluster VM
 
 ```bash
@@ -340,12 +343,14 @@ Add:
 
 ```
 192.168.56.107   api-dev.bookstore.com
+192.168.56.107   dev.bookstore.com
 ```
 
 Save and exit. Test:
 
 ```bash
 ping -c 3 api-dev.bookstore.com
+ping -c 3 dev.bookstore.com
 ```
 
 ### Prod Cluster VM
@@ -358,12 +363,14 @@ Add:
 
 ```
 192.168.56.108   api-prod.bookstore.com
+192.168.56.108   prod.bookstore.com
 ```
 
 Save and exit. Test:
 
 ```bash
 ping -c 3 api-prod.bookstore.com
+ping -c 3 prod.bookstore.com
 ```
 
 ---

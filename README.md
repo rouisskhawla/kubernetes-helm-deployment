@@ -322,24 +322,64 @@ All services are deployed using **raw Kubernetes manifests** in each service’s
 ### Manifest Files
 
 * `deployment.yaml` – defines pods, replicas, container image, ports, and environment variables
-* `service.yaml` – exposes the application inside the cluster (ClusterIP for now)
+* `service.yaml` – exposes the application inside the cluster (ClusterIP), with `targetPort` matching the actual port the Spring Boot app listens on
 * `configmap.yaml` – holds non-sensitive configuration and environment variables
+* `ingress.yaml` – exposes the service externally via NGINX Ingress Controller (**api-gateway** and **bookstore-frontend** only)
+
+### Placeholder Substitution
+
+All manifests use two placeholders substituted by the Jenkins pipeline at deploy time via `sed`:
+
+| Placeholder | Replaced With | Example |
+|---|---|---|
+| `PLACEHOLDER` | Computed image tag | `1.2.3-dev` |
+| `ENV` | Target namespace | `dev` or `prod` |
 
 ### Jenkinsfile Updates for Deployment
 
 1. **Select cluster** based on branch:
-
    * `dev` → Dev cluster
    * `main` → Prod cluster
-2. **Load kubeconfig credential** in pipeline stage
-3. **Inject image tag** computed during build
-4. Apply manifests in order:
-
+2. **Manual approval gate** (`input` step) — operator must confirm before any deployment proceeds
+3. **Load kubeconfig credential** in pipeline stage
+4. **Inject image tag and namespace** via `sed` substitution on all manifest files
+5. Apply manifests in order:
    * ConfigMap
    * Service
    * Deployment
+   * Ingress (api-gateway and bookstore-frontend only)
+6. **Wait for rollout** with a 120s timeout — `kubectl rollout status deployment/...`
 
 All deployment stages are **guarded by the changeset check** to prevent unnecessary rollouts.
+
+### Service Port Configuration
+
+Each microservice's Kubernetes `Service` must have a `targetPort` matching the port the application actually listens on. This is verified from pod startup logs. The Service always exposes port `80` externally — the `targetPort` handles the internal translation.
+
+Always route between services using the Kubernetes DNS name on port `80` (e.g. `http://authors-service.dev.svc.cluster.local:80`), never directly on the pod port.
+
+### Ingress Configuration
+
+Only **api-gateway** and **bookstore-frontend** have Ingress resources. Each uses a separate hostname to avoid NGINX Ingress controller conflicts.
+
+| Domain | Cluster | Target |
+|---|---|---|
+| `api-dev.bookstore.com` | Dev | api-gateway |
+| `api-prod.bookstore.com` | Prod | api-gateway |
+| `dev.bookstore.com` | Dev | bookstore-frontend |
+| `prod.bookstore.com` | Prod | bookstore-frontend |
+
+### Spring Cloud Gateway Routing
+
+The api-gateway routes requests to backend services using direct Kubernetes DNS URLs injected via Spring properties.
+
+Routes are defined in `GatewayConfig.java`.
+
+Each environment (`dev`, `prod`) has its own properties file with DNS URLs scoped to the correct namespace, e.g. `http://authors-service.dev.svc.cluster.local:80`.
+
+### Frontend Routing
+
+API requests from the Angular app are made using the absolute `api-ENV.bookstore.com` URL defined in the Angular environment file, and are routed to the api-gateway entirely through the Ingress layer.
 
 ---
 
