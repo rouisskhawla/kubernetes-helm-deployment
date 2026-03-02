@@ -16,7 +16,7 @@ public class CorsConfig {
 		CorsConfiguration config = new CorsConfiguration();
 		config.setAllowedOrigins(Arrays.asList(
 				"http://dev.bookstore.com:30860",    // dev k8s
-				"http://prod.bookstore.com:30860"    // prod k8s
+				"http://prod.bookstore.com:30860",    // prod k8s
                 "http://localhost:4200"
         ));
 		config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
