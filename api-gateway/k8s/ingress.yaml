@@ -11,17 +11,10 @@ spec:
     - host: api-ENV.bookstore.com
       http:
         paths:
-          - path: /api/(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: api-gateway
-                port:
-                  number: 80
           - path: /(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: bookstore-frontend
+                name: api-gateway
                 port:
                   number: 80
