@@ -39,7 +39,11 @@ pipeline {
             steps {
                 dir("${SERVICE_DIR}") {
                     sh 'npm ci'
-                    sh 'npm run build -- --configuration production'
+                    if (env.BRANCH_NAME == 'dev') {
+                        sh 'npm run build -- --configuration development'
+                    } else {
+                        sh 'npm run build -- --configuration production'
+                    }
                 }
             }
         }
@@ -51,7 +55,12 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                        docker.build("${IMAGE_NAME}:${env.VERSION}", "${SERVICE_DIR}")
+                        def buildConfig = (env.BRANCH_NAME == 'dev') ? 'development' : 'production'
+
+                        docker.build(
+                            "${IMAGE_NAME}:${env.VERSION}",
+                            "--build-arg BUILD_CONFIG=${buildConfig} ${SERVICE_DIR}"
+                        )
                     }
                 }
             }
