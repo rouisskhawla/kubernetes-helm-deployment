@@ -28,7 +28,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Build Angular') {
             when {
                 changeset "${SERVICE_DIR}/**"
@@ -39,10 +39,12 @@ pipeline {
             steps {
                 dir("${SERVICE_DIR}") {
                     sh 'npm ci'
-                    if (env.BRANCH_NAME == 'dev') {
-                        sh 'npm run build -- --configuration development'
-                    } else {
-                        sh 'npm run build -- --configuration production'
+                    script {
+                        if (env.BRANCH_NAME == 'dev') {
+                            sh 'npm run build -- --configuration development'
+                        } else {
+                            sh 'npm run build -- --configuration production'
+                        }
                     }
                 }
             }
