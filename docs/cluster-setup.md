@@ -436,7 +436,7 @@ Since hostNetwork is enabled the ingress controller binds directly to the node:
 ```bash
 ss -tlnp | grep :443
 ```
-[TLS Ingress](docs/screenshots/tls-ingress.png)
+[TLS Ingress](screenshots/tls-ingress.png)
 
 ---
 
@@ -466,3 +466,4 @@ kubectl create secret tls bookstore-prod-tls \
   * Prod: 192.168.56.108, Pod CIDR 10.245.0.0/16
   * Jenkins: 192.168.56.102
 * NGINX Ingress configured for both clusters.
+
