@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8090'
+  apiUrl: 'https://api-dev.bookstore.com/api' // api
 };

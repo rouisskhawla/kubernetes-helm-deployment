@@ -6,6 +6,8 @@ pipeline {
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
         IMAGE_NAME  = 'khawlarouiss/books-service'
         DOCKER_CREDENTIALS_ID = 'dockerlogin'
+        KUBECONFIG_DEV = 'kubeconfig-dev'
+        KUBECONFIG_PROD = 'kubeconfig-prod'
     }
 
     stages {
@@ -48,10 +50,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
-                        docker.build(
-                            "${IMAGE_NAME}:${env.VERSION}",
-                            "${SERVICE_DIR}"
-                        )
+                        docker.build("${IMAGE_NAME}:${env.VERSION}", "${SERVICE_DIR}")
                     }
                 }
             }
@@ -74,6 +73,81 @@ pipeline {
             }
         }
         
+        stage('Deploy to Kubernetes') {
+            when {
+                allOf {
+                    changeset "${SERVICE_DIR}/**"
+                    anyOf {
+                        branch 'dev'
+                        branch 'main'
+                    }
+                }
+            }
+            steps {
+                script {
+                    
+                    def namespace
+                    def kubeCredId
+                    def environmentName
+
+                    if (env.BRANCH_NAME == 'dev') {
+                        namespace = 'dev'
+                        kubeCredId = KUBECONFIG_DEV
+                        environmentName = "DEVELOPMENT"
+                    } else if (env.BRANCH_NAME == 'main') {
+                        namespace = 'prod'
+                        kubeCredId = KUBECONFIG_PROD
+                        environmentName = "PRODUCTION"
+                    }
+
+                    input(
+                        message: """
+CONFIRM DEPLOYMENT
+
+Service      : ${SERVICE_DIR}
+Image        : ${IMAGE_NAME}:${env.VERSION}
+Branch       : ${env.BRANCH_NAME}
+Environment  : ${environmentName}
+Namespace    : ${namespace}
+
+Do you want to proceed?
+""",
+                        ok: "Deploy"
+                    )
+
+                    withCredentials([file(credentialsId: kubeCredId, variable: 'KUBECONFIG')]) {
+                        sh """
+                        echo "Testing Kubernetes access"
+                        kubectl cluster-info
+                        kubectl get nodes
+                        kubectl get pods -A
+                        """
+
+                        sh """
+                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply --validate=false -f -
+                        """
+
+                        sh """
+                        for file in ${SERVICE_DIR}/k8s/*.yaml; do
+                            sed -e "s/PLACEHOLDER/${VERSION}/g" \
+                                -e "s/ENV/${namespace}/g" \
+                                \$file | kubectl apply -n ${namespace} -f -
+                        done
+                        """
+
+                        sh """
+                        DEPLOYMENT_NAME=${SERVICE_DIR}
+                        if kubectl get deployment \$DEPLOYMENT_NAME -n ${namespace} > /dev/null 2>&1; then
+                            echo "Rolling out deployment \$DEPLOYMENT_NAME..."
+                            kubectl rollout status deployment/\$DEPLOYMENT_NAME -n ${namespace}
+                        else
+                            echo "Deployment \$DEPLOYMENT_NAME does not exist yet."
+                        fi
+                        """
+                    }
+                }
+            }
+        }
     }
 
     post {
@@ -82,5 +156,4 @@ pipeline {
             cleanWs()
         }
     }
-
 }

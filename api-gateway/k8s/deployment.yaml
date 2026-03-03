@@ -5,7 +5,7 @@ metadata:
   labels:
     app: api-gateway
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: api-gateway
@@ -19,6 +19,9 @@ spec:
           image: khawlarouiss/api-gateway:PLACEHOLDER
           ports:
             - containerPort: 8090
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: ENV 
           envFrom:
             - configMapRef:
                 name: api-gateway-config

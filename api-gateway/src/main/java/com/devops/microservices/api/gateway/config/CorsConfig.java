@@ -15,10 +15,11 @@ public class CorsConfig {
 	public CorsWebFilter corsWebFilter() {
 		CorsConfiguration config = new CorsConfiguration();
 		config.setAllowedOrigins(Arrays.asList(
-				"http://local.bookstore",
-				"https://local.bookstore",
-                "http://192.168.1.11",   // prod front url
-                "http://localhost:4200" // dev front url
+				"http://dev.bookstore.com",
+				"http://prod.bookstore.com",
+				"https://dev.bookstore.com",
+				"https://prod.bookstore.com",
+                "http://localhost:4200"
         ));
 		config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(Arrays.asList("*"));

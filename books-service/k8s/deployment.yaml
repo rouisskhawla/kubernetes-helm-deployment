@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: authors-service
+  name: books-service
   labels:
-    app: authors-service
+    app: books-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: authors-service
+      app: books-service
   template:
     metadata:
       labels:
-        app: authors-service
+        app: books-service
     spec:
       containers:
-        - name: authors-service
-          image: khawlarouiss/authors-service:PLACEHOLDER
+        - name: books-service
+          image: khawlarouiss/books-service:PLACEHOLDER
           ports:
-            - containerPort: 8082
+            - containerPort: 8081
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: ENV 
           envFrom:
             - configMapRef:
-                name: authors-service-config
+                name: books-service-config
