@@ -284,14 +284,37 @@ Check nodes, pods, containerd, network, and API server connectivity on all VMs.
 
 ### 11.1 Install NGINX Ingress Controller (Both Clusters)
 
+Install using the baremetal manifest:
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
 kubectl get pods -n ingress-nginx
 kubectl get svc -n ingress-nginx
 ```
 
-### 11.2 Configure Node IP for kubelet (Both Clusters)
+### 11.2 Enable hostNetwork to Bind Port 80 Directly on the VM
 
+By default the baremetal install uses NodePort. Patch the controller to use `hostNetwork` so it binds directly to port 80 and 443 on the node IP — no port number needed in URLs.
+```bash
+kubectl patch deployment ingress-nginx-controller -n ingress-nginx \
+  --type='json' \
+  -p='[
+    {"op":"add","path":"/spec/template/spec/hostNetwork","value":true},
+    {"op":"add","path":"/spec/template/spec/dnsPolicy","value":"ClusterFirstWithHostNet"}
+  ]'
+
+kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx
+```
+
+### 11.3 Verify Port 80 is Listening on the Node
+```bash
+# Pod IP should match the node IP (192.168.56.107 for Dev, 192.168.56.108 for Prod)
+kubectl get pod -n ingress-nginx -o wide
+
+# Port 80 should be listed
+ss -tlnp | grep :80
+```
+
+### 11.4 Configure Node IP for kubelet (Both Clusters)
 ```bash
 sudo nano /etc/default/kubelet
 # Add for Dev
@@ -300,28 +323,26 @@ KUBELET_EXTRA_ARGS="--node-ip=192.168.56.107"
 KUBELET_EXTRA_ARGS="--node-ip=192.168.56.108"
 ```
 
-### 11.3 Restart kubelet
-
+### 11.5 Restart kubelet
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart kubelet
 ```
 
-### 11.4 Verify Node IP Configuration
-
+### 11.6 Verify Node IP Configuration
 ```bash
 kubectl get nodes -o wide
 kubectl describe node k8s-dev | grep -A 5 "Addresses:"
 kubectl describe node k8s-prod | grep -A 5 "Addresses:"
 ```
 
-### 11.5 Test Ingress Controller
-
+### 11.7 Test Ingress Controller
 ```bash
 kubectl get ingress -n dev
 kubectl get ingress -n prod
-curl http://api-dev.bookstore.com
-curl http://api-prod.bookstore.com
+
+curl http://api-dev.bookstore.com/api/authors
+curl http://api-prod.bookstore.com/api/authors
 ```
 
 ---
@@ -375,6 +396,67 @@ ping -c 3 prod.bookstore.com
 
 ---
 
+## STEP 13: Enable SSL with Self-Signed Certificates
+
+### 13.1 Generate Self-Signed Certificate (Dev Cluster VM)
+
+Generate a single certificate covering both dev domains:
+```bash
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout bookstore-dev.key \
+  -out bookstore-dev.crt \
+  -subj "/CN=bookstore-dev/O=bookstore" \
+  -addext "subjectAltName=DNS:dev.bookstore.com,DNS:api-dev.bookstore.com"
+```
+
+---
+
+### 13.2 Create Kubernetes TLS Secret
+```bash
+kubectl create secret tls bookstore-dev-tls \
+  --cert=bookstore-dev.crt \
+  --key=bookstore-dev.key \
+  -n dev
+
+# Verify secret was created
+kubectl get secret bookstore-dev-tls -n dev
+```
+
+---
+
+### 13.3 Update Ingress Resources
+
+Update both Ingress files to add TLS configuration referencing the secret created.
+
+---
+
+### 13.4 Verify Port 443 is Listening
+
+Since hostNetwork is enabled the ingress controller binds directly to the node:
+```bash
+ss -tlnp | grep :443
+```
+
+---
+
+### 13.5 Repeat for Prod Cluster VM
+
+Run the same steps on the Prod VM (`192.168.56.108`) with prod domain names:
+```bash
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout bookstore-prod.key \
+  -out bookstore-prod.crt \
+  -subj "/CN=bookstore-prod/O=bookstore" \
+  -addext "subjectAltName=DNS:prod.bookstore.com,DNS:api-prod.bookstore.com"
+
+kubectl create secret tls bookstore-prod-tls \
+  --cert=bookstore-prod.crt \
+  --key=bookstore-prod.key \
+  -n prod
+```
+
+---
+
 ## Summary
 
 * Two clusters are ready for CI/CD:
@@ -382,4 +464,4 @@ ping -c 3 prod.bookstore.com
   * Dev: 192.168.56.107, Pod CIDR 10.244.0.0/16
   * Prod: 192.168.56.108, Pod CIDR 10.245.0.0/16
   * Jenkins: 192.168.56.102
-* NGINX Ingress configured for both clusters with correct node IPs.
+* NGINX Ingress configured for both clusters.
