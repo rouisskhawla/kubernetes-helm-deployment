@@ -436,6 +436,7 @@ Since hostNetwork is enabled the ingress controller binds directly to the node:
 ```bash
 ss -tlnp | grep :443
 ```
+[TLS Ingress](docs/screenshots/tls-ingress.png)
 
 ---
 

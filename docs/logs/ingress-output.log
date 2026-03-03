@@ -1,0 +1,43 @@
+
+$kubectl get ingress -n dev 
+
+NAME                 CLASS   HOSTS                   ADDRESS          PORTS     AGE
+api-gateway          nginx   api-dev.bookstore.com   192.168.56.107   80, 443   17d
+bookstore-frontend   nginx   dev.bookstore.com       192.168.56.107   80, 443   26h
+
+$kubectl describe ingress -n dev
+
+Name:             api-gateway
+Labels:           <none>
+Namespace:        dev
+Address:          192.168.56.107
+Ingress Class:    nginx
+Default backend:  <default>
+TLS:
+  bookstore-dev-tls terminates api-dev.bookstore.com
+Rules:
+  Host                   Path  Backends
+  ----                   ----  --------
+  api-dev.bookstore.com  
+                         /(.*)   api-gateway:80 (10.244.252.224:8090)
+Annotations:             nginx.ingress.kubernetes.io/ssl-redirect: true
+                         nginx.ingress.kubernetes.io/use-regex: true
+Events:                  <none>
+
+
+Name:             bookstore-frontend
+Labels:           <none>
+Namespace:        dev
+Address:          192.168.56.107
+Ingress Class:    nginx
+Default backend:  <default>
+TLS:
+  bookstore-dev-tls terminates dev.bookstore.com
+Rules:
+  Host               Path  Backends
+  ----               ----  --------
+  dev.bookstore.com  
+                     /(.*)   bookstore-frontend:80 (10.244.252.235:80)
+Annotations:         nginx.ingress.kubernetes.io/ssl-redirect: true
+                     nginx.ingress.kubernetes.io/use-regex: true
+Events:              <none>

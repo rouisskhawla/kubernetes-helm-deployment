@@ -326,6 +326,8 @@ All services are deployed using **raw Kubernetes manifests** in each service’s
 * `configmap.yaml` – holds non-sensitive configuration and environment variables
 * `ingress.yaml` – exposes the service externally via NGINX Ingress Controller (**api-gateway** and **bookstore-frontend** only)
 
+![Kubernetes Manifests](docs/screenshots/k8s-manifests.png)
+
 ### Placeholder Substitution
 
 All manifests use two placeholders substituted by the Jenkins pipeline at deploy time via `sed`:
@@ -369,6 +371,8 @@ Only **api-gateway** and **bookstore-frontend** have Ingress resources. Each use
 | `dev.bookstore.com` | Dev | bookstore-frontend |
 | `prod.bookstore.com` | Prod | bookstore-frontend |
 
+**Ingress configuration output:** [ingress-output.log](docs/logs/ingress-output.log)
+
 ### Spring Cloud Gateway Routing
 
 The api-gateway routes requests to backend services using direct Kubernetes DNS URLs injected via Spring properties.
@@ -380,6 +384,8 @@ Each environment (`dev`, `prod`) has its own properties file with DNS URLs scope
 ### Frontend Routing
 
 API requests from the Angular app are made using the absolute `api-ENV.bookstore.com` URL defined in the Angular environment file, and are routed to the api-gateway entirely through the Ingress layer.
+
+[Frontend Running](docs/screenshots/frontend-dev.png)
 
 ---
 
