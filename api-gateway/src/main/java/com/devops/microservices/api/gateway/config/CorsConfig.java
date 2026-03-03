@@ -15,8 +15,10 @@ public class CorsConfig {
 	public CorsWebFilter corsWebFilter() {
 		CorsConfiguration config = new CorsConfiguration();
 		config.setAllowedOrigins(Arrays.asList(
-				"http://dev.bookstore.com",    // dev k8s
-				"http://prod.bookstore.com",    // prod k8s
+				"http://dev.bookstore.com",
+				"http://prod.bookstore.com",
+				"https://dev.bookstore.com",
+				"https://prod.bookstore.com",
                 "http://localhost:4200"
         ));
 		config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

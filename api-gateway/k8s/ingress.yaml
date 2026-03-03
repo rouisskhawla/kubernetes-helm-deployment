@@ -5,8 +5,13 @@ metadata:
   namespace: ENV
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - api-ENV.bookstore.com
+      secretName: bookstore-ENV-tls
   rules:
     - host: api-ENV.bookstore.com
       http:
