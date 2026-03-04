@@ -129,7 +129,7 @@ Do you want to proceed?
 
                     withCredentials([file(credentialsId: kubeCredId, variable: 'KUBECONFIG')]) {
                         sh """
-                        echo "Testing Kubernetes access"
+                        echo "Testing Kubernetes access..."
                         kubectl cluster-info
                         kubectl get nodes
                         kubectl get pods -A
