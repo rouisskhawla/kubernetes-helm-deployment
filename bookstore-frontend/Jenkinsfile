@@ -150,7 +150,7 @@ Do you want to proceed?
                         sh """
                         DEPLOYMENT_NAME=${SERVICE_DIR}
                         if kubectl get deployment \$DEPLOYMENT_NAME -n ${namespace} > /dev/null 2>&1; then
-                            echo "Rolling out deployment \$DEPLOYMENT_NAME..."
+                            echo "Rolling out deployment \$DEPLOYMENT_NAME.."
                             kubectl rollout status deployment/\$DEPLOYMENT_NAME -n ${namespace}
                         else
                             echo "Deployment \$DEPLOYMENT_NAME does not exist yet."
