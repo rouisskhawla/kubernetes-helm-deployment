@@ -337,6 +337,14 @@ All manifests use two placeholders substituted by the Jenkins pipeline at deploy
 | `PLACEHOLDER` | Computed image tag | `1.2.3-dev` |
 | `ENV` | Target namespace | `dev` or `prod` |
 
+### Running Kubernetes Resources
+
+After the manifests are applied, the cluster creates the required resources including Pods, Services, Deployments, and Ingress.
+
+The following screenshot shows the running resources in the production namespace.
+
+[Kubernetes Resources](docs/screenshots/k8s-pods-prod.png)
+
 ### Jenkinsfile Updates for Deployment
 
 1. **Select cluster** based on branch:
@@ -353,6 +361,10 @@ All manifests use two placeholders substituted by the Jenkins pipeline at deploy
 6. **Wait for rollout** with a 120s timeout — `kubectl rollout status deployment/...`
 
 All deployment stages are **guarded by the changeset check** to prevent unnecessary rollouts.
+
+The following screenshot shows the Jenkins pipeline executing the Kubernetes deployment stage.
+
+![Jenkins Kubernetes Deployment](docs/screenshots/deployment-stage.png)
 
 ### Service Port Configuration
 
@@ -383,20 +395,36 @@ Each environment (`dev`, `prod`) has its own properties file with DNS URLs scope
 
 ### Frontend Routing
 
-API requests from the Angular app are made using the absolute `api-ENV.bookstore.com` URL defined in the Angular environment file, and are routed to the api-gateway entirely through the Ingress layer.
+API requests from the Angular application are made using the absolute
+`api-ENV.bookstore.com` URL and routed through the NGINX Ingress Controller to the API Gateway.
 
-[Frontend Running](docs/screenshots/frontend-dev.png)
+The screenshots below show the frontend application successfully running through the Ingress layer in both environments.
+
+#### Dev Environment
+[Frontend Running - Dev](docs/screenshots/frontend-dev.png)
+
+#### Production Environment
+[Frontend Running - Prod](docs/screenshots/frontend-prod.png)
 
 ---
 
+
 ## Cluster Setup Documentation
 
-For detailed cluster setup instructions, see [docs/cluster-setup.md](docs/cluster-setup.md)
+For detailed Kubernetes cluster installation and infrastructure configuration steps, see:
 
-This file contains:
+[Cluster Setup Guide](docs/cluster-setup.md)
 
-* VM networking and static IP configuration
-* Kubernetes installation (kubeadm + containerd)
-* CNI setup (Calico)
-* Jenkins → Kubernetes access
-* Kubeconfig management
+This document includes the complete setup process for the project infrastructure, including:
+
+* VM network configuration and static IP setup for Jenkins, Dev, and Prod nodes
+* Kubernetes installation using **kubeadm**, **kubelet**, and **kubectl**
+* Container runtime configuration with **containerd**
+* Cluster initialization and control-plane configuration
+* Pod networking setup using **Calico CNI**
+* SSH access configuration between Jenkins and cluster nodes
+* Jenkins integration with Kubernetes using **kubeconfig credentials**
+* Installation and configuration of the **NGINX Ingress Controller**
+* Hostname resolution for ingress domains via `/etc/hosts`
+* TLS configuration using **self-signed certificates** for Dev and Prod environments
+* Verification commands to confirm cluster health and connectivity
