@@ -142,7 +142,7 @@ Do you want to proceed?
                         sh """
                         echo "Waiting for rollout..."
 
-                        kubectl rollout status deployment/api-gateway -n ${namespace}
+                        kubectl rollout status deployment/${SERVICE_DIR} -n ${namespace}
                         """
 
                         sh """
