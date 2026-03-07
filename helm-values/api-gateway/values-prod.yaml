@@ -1,0 +1,23 @@
+name: api-gateway
+namespace: prod
+
+replicaCount: 1
+
+image:
+  repository: khawlarouiss/api-gateway
+  tag: latest
+
+service:
+  port: 80
+  targetPort: 8090
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+
+config:
+  LOG_LEVEL: INFO
+
+ingress:
+  enabled: true
+  host: api-prod.bookstore.com
+  tlsSecret: bookstore-prod-tls
