@@ -1,0 +1,17 @@
+name: bookstore-frontend
+namespace: dev
+
+replicaCount: 1
+
+image:
+  repository: khawlarouiss/bookstore-frontend
+  tag: ""  
+  
+service:
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  host: dev.bookstore.com
+  tlsSecret: bookstore-dev-tls
