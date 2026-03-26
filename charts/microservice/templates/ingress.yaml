@@ -1,25 +1,27 @@
+{{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: bookstore-frontend
-  namespace: ENV
+  name: {{ .Values.name }}
+  namespace: {{ .Values.namespace }}
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
-  ingressClassName: nginx
+  ingressClassName: {{ .Values.ingress.className }}
   tls:
     - hosts:
-        - ENV.bookstore.com
-      secretName: bookstore-ENV-tls
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tlsSecret }}
   rules:
-    - host: ENV.bookstore.com
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
           - path: /(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: bookstore-frontend
+                name: {{ .Values.name }}
                 port:
-                  number: 80
+                  number: {{ .Values.service.port }}
+{{- end }}

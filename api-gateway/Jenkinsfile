@@ -85,18 +85,22 @@ pipeline {
             }
             steps {
                 script {
-                    
+
                     def namespace
                     def kubeCredId
+                    def valuesFile
                     def environmentName
 
                     if (env.BRANCH_NAME == 'dev') {
                         namespace = 'dev'
                         kubeCredId = KUBECONFIG_DEV
+                        valuesFile = "values-dev.yaml"
                         environmentName = "DEVELOPMENT"
-                    } else if (env.BRANCH_NAME == 'main') {
+                    } 
+                    else if (env.BRANCH_NAME == 'main') {
                         namespace = 'prod'
                         kubeCredId = KUBECONFIG_PROD
+                        valuesFile = "values-prod.yaml"
                         environmentName = "PRODUCTION"
                     }
 
@@ -105,7 +109,8 @@ pipeline {
 CONFIRM DEPLOYMENT
 
 Service      : ${SERVICE_DIR}
-Image        : ${IMAGE_NAME}:${env.VERSION}
+Image Repo   : ${IMAGE_NAME}
+Computed Tag : ${env.VERSION}
 Branch       : ${env.BRANCH_NAME}
 Environment  : ${environmentName}
 Namespace    : ${namespace}
@@ -120,29 +125,32 @@ Do you want to proceed?
                         echo "Testing Kubernetes access..."
                         kubectl cluster-info
                         kubectl get nodes
-                        kubectl get pods -A
+                        """
+                        
+                        sh """
+                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -
+                        """
+                        
+                        sh """
+                        helm upgrade --install ${SERVICE_DIR} charts/microservice \
+                        -f helm-values/${SERVICE_DIR}/${valuesFile} \
+                        --set global.imageTag=${VERSION} \
+                        --namespace ${namespace} \
+                        --create-namespace
                         """
 
                         sh """
-                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply --validate=false -f -
+                        echo "Waiting for rollout..."
+
+                        kubectl rollout status deployment/${SERVICE_DIR} -n ${namespace}
                         """
 
                         sh """
-                        for file in ${SERVICE_DIR}/k8s/*.yaml; do
-                            sed -e "s/PLACEHOLDER/${VERSION}/g" \
-                                -e "s/ENV/${namespace}/g" \
-                                \$file | kubectl apply -n ${namespace} -f -
-                        done
-                        """
+                        echo "Deployment resources:"
 
-                        sh """
-                        DEPLOYMENT_NAME=${SERVICE_DIR}
-                        if kubectl get deployment \$DEPLOYMENT_NAME -n ${namespace} > /dev/null 2>&1; then
-                            echo "Rolling out deployment \$DEPLOYMENT_NAME..."
-                            kubectl rollout status deployment/\$DEPLOYMENT_NAME -n ${namespace}
-                        else
-                            echo "Deployment \$DEPLOYMENT_NAME does not exist yet."
-                        fi
+                        kubectl get pods -n ${namespace}
+                        kubectl get svc -n ${namespace}
+                        kubectl get ingress -n ${namespace}
                         """
                     }
                 }

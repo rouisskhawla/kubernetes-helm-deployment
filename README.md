@@ -12,22 +12,20 @@ kubernetes-helm-deployment/
 │   ├── Jenkinsfile
 │   ├── Dockerfile
 │   ├── pom.xml
-│   └── k8s/
 ├── books-service/
 │   ├── Jenkinsfile
 │   ├── Dockerfile
 │   ├── pom.xml
-│   └── k8s/
 ├── api-gateway/
 │   ├── Jenkinsfile
 │   ├── Dockerfile
 │   ├── pom.xml
-│   └── k8s/
 ├── bookstore-frontend/
 │   ├── Jenkinsfile
 │   ├── Dockerfile
 │   ├── package.json
-│   └── k8s/
+├── charts/
+├── helm-values/
 ├── scripts/
 │   └── version.sh
 └── docs/
@@ -40,7 +38,7 @@ kubernetes-helm-deployment/
 * **Front-end service:** `bookstore-frontend` (Angular, NodeJS)
 * **Shared scripts:** `scripts/version.sh` – semantic versioning logic used by all pipelines
 
-Each service has its own `Jenkinsfile`, `Dockerfile`, **and Kubernetes manifests** under `k8s/`.
+Each service has its own `Jenkinsfile`, `Dockerfile`, and **Helm charts**.
 
 ---
 
@@ -137,7 +135,7 @@ The computed version is then used for:
 
 * Docker build
 * Docker push
-* Deployment via Kubernetes manifests
+* Deployment via Helm
 
 ---
 
@@ -236,7 +234,7 @@ Each service is configured as a Jenkins **Multibranch Pipeline** pointing to its
 * **Script Path:** Example: `api-gateway/Jenkinsfile`
 * **Branch Discovery:** All branches (`dev`, `main`)
 * **Trigger:** GitHub webhook push events
-  
+
 [Pipeline Configuration](docs/screenshots/pipeline-config.png)
 
 ---
@@ -300,7 +298,6 @@ authors-service:1.2.4
 authors-service:latest
 ```
 
-
 ### Successful Pipeline Execution
 
 The following screenshot shows a successful pipeline execution for a service, including version computation, build, and Docker push stages:
@@ -315,99 +312,86 @@ Other services remain skipped if unchanged. The screenshot below shows stages be
 
 ---
 
-## ☸️ Kubernetes Deployment
+## ☸️ Kubernetes Deployment (Helm-Based)
 
-All services are deployed using **raw Kubernetes manifests** in each service’s `k8s/` directory.
+All services are deployed using **Helm charts** in `charts/microservice` instead of raw Kubernetes manifests.
 
-### Manifest Files
+This removes duplication, simplifies configuration management, and standardizes deployments across all microservices.
 
-* `deployment.yaml` – defines pods, replicas, container image, ports, and environment variables
-* `service.yaml` – exposes the application inside the cluster (ClusterIP), with `targetPort` matching the actual port the Spring Boot app listens on
-* `configmap.yaml` – holds non-sensitive configuration and environment variables
-* `ingress.yaml` – exposes the service externally via NGINX Ingress Controller (**api-gateway** and **bookstore-frontend** only)
+### Templates
 
-![Kubernetes Manifests](docs/screenshots/k8s-manifests.png)
+| Template          | Purpose                         |
+| ----------------- | ------------------------------- |
+| `deployment.yaml` | Pod and container configuration |
+| `service.yaml`    | Internal ClusterIP service      |
+| `configmap.yaml`  | Environment variables           |
+| `ingress.yaml`    | External exposure (optional)    |
 
-### Placeholder Substitution
+### Service Exposure Strategy
 
-All manifests use two placeholders substituted by the Jenkins pipeline at deploy time via `sed`:
+| Service            | Access   | Ingress |
+| ------------------ | -------- | ------- |
+| api-gateway        | External | ✅       |
+| bookstore-frontend | External | ✅       |
+| authors-service    | Internal | ❌       |
+| books-service      | Internal | ❌       |
 
-| Placeholder | Replaced With | Example |
-|---|---|---|
-| `PLACEHOLDER` | Computed image tag | `1.2.3-dev` |
-| `ENV` | Target namespace | `dev` or `prod` |
+### Helm Installation (Jenkins VM)
 
-### Running Kubernetes Resources
+```bash
+# Download Helm
+curl -fsSL https://get.helm.sh/helm-v3.12.3-linux-amd64.tar.gz -o helm.tar.gz
 
-After the manifests are applied, the cluster creates the required resources including Pods, Services, Deployments, and Ingress.
+# Extract
+tar -zxvf helm.tar.gz
 
-The following screenshot shows the running resources in the production namespace.
+# Move binary
+sudo mv linux-amd64/helm /usr/local/bin/helm
+sudo chmod +x /usr/local/bin/helm
 
-[Kubernetes Resources](docs/screenshots/k8s-pods-prod.png)
+# Verify
+helm version
+```
 
-### Jenkinsfile Updates for Deployment
+### Deployment Command
 
-1. **Select cluster** based on branch:
-   * `dev` → Dev cluster
-   * `main` → Prod cluster
-2. **Manual approval gate** (`input` step) — operator must confirm before any deployment proceeds
-3. **Load kubeconfig credential** in pipeline stage
-4. **Inject image tag and namespace** via `sed` substitution on all manifest files
-5. Apply manifests in order:
-   * ConfigMap
-   * Service
-   * Deployment
-   * Ingress (api-gateway and bookstore-frontend only)
-6. **Wait for rollout** with a 120s timeout — `kubectl rollout status deployment/...`
+```bash
+helm upgrade --install <service-name> charts/microservice \
+  -f helm-values/<service>/values-<env>.yaml \
+  --set global.imageTag=<VERSION> \
+  --namespace <namespace> \
+  --create-namespace
+```
 
-All deployment stages are **guarded by the changeset check** to prevent unnecessary rollouts.
+**Dev example:**
 
-The following screenshot shows the Jenkins pipeline executing the Kubernetes deployment stage.
+```bash
+helm upgrade --install api-gateway charts/microservice \
+  -f helm-values/api-gateway/values-dev.yaml \
+  --set global.imageTag=1.2.3-dev \
+  --namespace dev \
+  --create-namespace
+```
 
-![Jenkins Kubernetes Deployment](docs/screenshots/deployment-stage.png)
+**Prod example:**
 
-### Service Port Configuration
+```bash
+helm upgrade --install api-gateway charts/microservice \
+  -f helm-values/api-gateway/values-prod.yaml \
+  --set global.imageTag=latest \
+  --namespace prod \
+  --create-namespace
+```
 
-Each microservice's Kubernetes `Service` must have a `targetPort` matching the port the application actually listens on. This is verified from pod startup logs. The Service always exposes port `80` externally — the `targetPort` handles the internal translation.
+### Jenkins Deployment Flow
 
-Always route between services using the Kubernetes DNS name on port `80` (e.g. `http://authors-service.dev.svc.cluster.local:80`), never directly on the pod port.
-
-### Ingress Configuration
-
-Only **api-gateway** and **bookstore-frontend** have Ingress resources. Each uses a separate hostname to avoid NGINX Ingress controller conflicts.
-
-| Domain | Cluster | Target |
-|---|---|---|
-| `api-dev.bookstore.com` | Dev | api-gateway |
-| `api-prod.bookstore.com` | Prod | api-gateway |
-| `dev.bookstore.com` | Dev | bookstore-frontend |
-| `prod.bookstore.com` | Prod | bookstore-frontend |
-
-**Ingress configuration output:** [ingress-output.log](docs/logs/ingress-output.log)
-
-### Spring Cloud Gateway Routing
-
-The api-gateway routes requests to backend services using direct Kubernetes DNS URLs injected via Spring properties.
-
-Routes are defined in `GatewayConfig.java`.
-
-Each environment (`dev`, `prod`) has its own properties file with DNS URLs scoped to the correct namespace, e.g. `http://authors-service.dev.svc.cluster.local:80`.
-
-### Frontend Routing
-
-API requests from the Angular application are made using the absolute
-`api-ENV.bookstore.com` URL and routed through the NGINX Ingress Controller to the API Gateway.
-
-The screenshots below show the frontend application successfully running through the Ingress layer in both environments.
-
-#### Dev Environment
-[Frontend Running - Dev](docs/screenshots/frontend-dev.png)
-
-#### Production Environment
-[Frontend Running - Prod](docs/screenshots/frontend-prod.png)
+1. Select environment based on branch (`dev` or `main`)
+2. Choose the correct Helm values file
+3. Inject the image tag dynamically
+4. Deploy service using Helm
+5. Wait for rollout and verify pods
 
 ---
-
 
 ## Cluster Setup Documentation
 
