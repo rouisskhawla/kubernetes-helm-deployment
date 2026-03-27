@@ -356,10 +356,10 @@ helm version
 ### Deployment Command
 
 ```bash
-helm upgrade --install <service-name> charts/microservice \
-  -f helm-values/<service>/values-<env>.yaml \
-  --set global.imageTag=<VERSION> \
-  --namespace <namespace> \
+helm upgrade --install ${SERVICE_DIR} charts/microservice \
+  -f helm-values/${SERVICE_DIR}/${valuesFile} \
+  --set global.imageTag=${VERSION} \
+  --namespace ${namespace} \
   --create-namespace
 ```
 
