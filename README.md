@@ -312,6 +312,42 @@ Other services remain skipped if unchanged. The screenshot below shows stages be
 
 ---
 
+## CI/CD strategy 
+
+### Deployment Strategy
+
+- Each microservice is deployed independently using Helm charts.
+- Deployments are environment aware:
+  - `dev` namespace/cluster for development
+  - `prod` namespace/cluster for production
+- Helm is used for both initial deployment and updates.
+- Kubernetes performs rolling updates automatically during deployments, ensuring service continuity.
+
+
+### Rollback Strategy
+
+- Rollbacks are handled using Helm revision history.
+- In case of deployment failure or instability, previous stable versions can be restored.
+
+
+### Docker Strategy
+
+* Each microservice builds its own Docker image independently.
+* Images are tagged using semantic versioning from the shared versioning script.
+* Branch-based tagging strategy
+* Docker images are stored in Docker Hub and consumed directly by Kubernetes deployments.
+
+### Security Practices
+
+* Kubernetes cluster access is managed using `kubeconfig` files securely stored in Jenkins credentials.
+* GitHub authentication uses fine-grained Personal Access Tokens (PAT).
+* Docker Hub authentication uses access tokens.
+* Jenkins securely manages all credentials via its Credentials Manager.
+* No secrets or sensitive information are stored in the repository.
+* Microservices isolation ensures separation of concerns.
+
+--- 
+
 ## ☸️ Kubernetes Deployment (Helm-Based)
 
 All services are deployed using **Helm charts** in `charts/microservice` instead of raw Kubernetes manifests.
