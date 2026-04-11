@@ -4,6 +4,13 @@ This document contains the complete steps for configuring and setting up the Kub
 
 ---
 
+## Architecture overview
+
+![Clusters Architecture](screenshots/architecture.png)
+
+
+---
+
 ## Network Configuration Summary
 
 | VM               | IP Address     | Interface |
