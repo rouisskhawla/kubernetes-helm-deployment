@@ -6,6 +6,17 @@ This repository contains a monorepo setup for a microservice-based application, 
 
 ## Project Structure
 
+* **Back-end services:** `authors-service`, `books-service`, `api-gateway` (Java/Spring Boot, Maven)
+* **Front-end service:** `bookstore-frontend` (Angular, NodeJS)
+* **Shared scripts:** `scripts/version.sh` – semantic versioning logic used by all pipelines
+
+Each service has its own `Jenkinsfile`, `Dockerfile`, and **Helm charts**.
+
+<details>
+<summary>📁 View Project Structure</summary>
+
+<br>
+
 ```
 kubernetes-helm-deployment/
 ├── authors-service/
@@ -29,22 +40,23 @@ kubernetes-helm-deployment/
 ├── scripts/
 │   └── version.sh
 └── docs/
-    ├── cluster-setup.md
-    ├── screenshots/
-    └── logs/
+├── cluster-setup.md
+├── screenshots/
+└── logs/
 ```
 
-* **Back-end services:** `authors-service`, `books-service`, `api-gateway` (Java/Spring Boot, Maven)
-* **Front-end service:** `bookstore-frontend` (Angular, NodeJS)
-* **Shared scripts:** `scripts/version.sh` – semantic versioning logic used by all pipelines
-
-Each service has its own `Jenkinsfile`, `Dockerfile`, and **Helm charts**.
+</details>
 
 ---
 
 ## CI/CD Architecture
 
 We use **Jenkins Multibranch Pipelines** to manage independent pipelines per service. Each service builds, tests, pushes Docker images, and deploys to Kubernetes.
+
+### Architecture Overview
+
+![Architecture](docs/architecture/ci-cd-architecture.png)
+
 
 ### Jenkins Dashboard
 
